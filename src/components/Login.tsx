@@ -24,7 +24,7 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4 font-sans">
+    <div className="h-full flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-4 font-sans">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

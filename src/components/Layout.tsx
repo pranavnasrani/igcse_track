@@ -38,7 +38,7 @@ export function Layout({ children, currentView, navigateTo, user }: LayoutProps)
   const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 font-sans transition-colors duration-200">
+    <div className="flex h-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 font-sans transition-colors duration-200">
       {/* Sidebar for Desktop */}
       <aside className="hidden md:flex flex-col w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-colors duration-200">
         <div className="p-6">
@@ -99,7 +99,7 @@ export function Layout({ children, currentView, navigateTo, user }: LayoutProps)
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
+      <main className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
         {/* Mobile Header */}
         <header className="md:hidden bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between transition-colors duration-200">
           <h1 className="text-xl font-bold text-indigo-600 dark:text-indigo-400 font-display">IGCSE Tracker</h1>
@@ -113,7 +113,7 @@ export function Layout({ children, currentView, navigateTo, user }: LayoutProps)
           </div>
         </header>
         
-        <div className="flex-1 overflow-y-auto p-4 md:p-8">
+        <div className="flex-1 overflow-y-auto overscroll-y-contain p-4 md:p-8">
           <div className="max-w-5xl mx-auto h-full">
             {children}
           </div>

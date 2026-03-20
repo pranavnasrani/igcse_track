@@ -8,8 +8,13 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+}
+
 body {
-  @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-50;
+  @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-50 overscroll-none;
   font-family: var(--font-sans);
 }
 
