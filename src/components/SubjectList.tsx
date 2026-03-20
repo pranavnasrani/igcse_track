@@ -1,80 +1,166 @@
 import React, { useState } from 'react';
+import { BookOpen, Plus, ChevronRight, Target } from 'lucide-react';
 import { useStore } from '../store';
-import { calculatePercentage } from '../utils';
-import { BookOpen, ChevronRight, Plus } from 'lucide-react';
-import { AddSubjectModal } from './AddSubjectModal';
+import { Subject } from '../types';
+import { motion, AnimatePresence } from 'motion/react';
+import { IGCSE_SUBJECTS } from '../constants';
 
 interface SubjectListProps {
-  store: ReturnType<typeof useStore>;
-  navigateTo: (view: 'dashboard' | 'subjects' | 'subject', subjectId?: string) => void;
+  onSelectSubject: (id: string) => void;
+  userId: string;
 }
 
-export function SubjectList({ store, navigateTo }: SubjectListProps) {
-  const { subjects, logs } = store;
+export function SubjectList({ onSelectSubject, userId }: SubjectListProps) {
+  const { subjects, addSubject } = useStore(userId);
   const [isAdding, setIsAdding] = useState(false);
+  const [newSubjectName, setNewSubjectName] = useState('');
+  const [newSubjectCode, setNewSubjectCode] = useState('');
+  const [newSubjectColor, setNewSubjectColor] = useState('#6366f1');
+  const [newSubjectTarget, setNewSubjectTarget] = useState<number | ''>('');
+
+  const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const code = e.target.value;
+    setNewSubjectCode(code);
+    if (IGCSE_SUBJECTS[code]) {
+      setNewSubjectName(IGCSE_SUBJECTS[code]);
+    }
+  };
+
+  const handleAddSubject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newSubjectName.trim()) {
+      await addSubject({
+        name: newSubjectName.trim(),
+        code: newSubjectCode.trim(),
+        color: newSubjectColor,
+        targetScore: newSubjectTarget === '' ? undefined : Number(newSubjectTarget),
+      });
+      setNewSubjectName('');
+      setNewSubjectCode('');
+      setNewSubjectColor('#6366f1');
+      setNewSubjectTarget('');
+      setIsAdding(false);
+    }
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight text-slate-900">Subjects</h2>
-        <button 
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      className="space-y-6 pb-20 md:pb-0"
+    >
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-3xl font-bold text-slate-900 font-display tracking-tight">Subjects</h2>
+          <p className="text-slate-500 mt-1">Manage your IGCSE subjects and track progress.</p>
+        </div>
+        <button
           onClick={() => setIsAdding(true)}
-          className="flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
+          className="flex items-center px-4 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors shadow-sm font-medium"
         >
-          <Plus className="w-4 h-4 mr-2" />
+          <Plus className="w-5 h-5 mr-2" />
           Add Subject
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {subjects.map(subject => {
-          const subjectLogs = logs.filter(l => l.subjectId === subject.id);
-          const averageScore = subjectLogs.length > 0 
-            ? Math.round(subjectLogs.reduce((acc, log) => acc + calculatePercentage(log.score, log.maxScore), 0) / subjectLogs.length)
-            : null;
-
-          return (
-            <div 
-              key={subject.id}
-              onClick={() => navigateTo('subject', subject.id)}
-              className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:border-indigo-200 hover:shadow-md transition-all cursor-pointer group"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-3">
-                  <div 
-                    className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm"
-                    style={{ backgroundColor: subject.color }}
-                  >
-                    <BookOpen className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">
-                      {subject.name}
-                    </h3>
-                    <p className="text-xs font-medium text-slate-500">{subject.code}</p>
-                  </div>
-                </div>
-                <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-indigo-400 transition-colors" />
-              </div>
-
-              <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-50">
+      <AnimatePresence>
+        {isAdding && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <form onSubmit={handleAddSubject} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4 font-display">Add New Subject</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
-                  <p className="text-xs text-slate-500 mb-1">Papers Done</p>
-                  <p className="font-semibold text-slate-900">{subjectLogs.length}</p>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Subject Code</label>
+                  <input
+                    type="text"
+                    value={newSubjectCode}
+                    onChange={handleCodeChange}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow"
+                    placeholder="e.g., 0580"
+                  />
                 </div>
-                <div className="text-right">
-                  <p className="text-xs text-slate-500 mb-1">Average</p>
-                  <p className="font-semibold text-slate-900">
-                    {averageScore !== null ? `${averageScore}%` : '-'}
-                  </p>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Subject Name</label>
+                  <input
+                    type="text"
+                    value={newSubjectName}
+                    onChange={(e) => setNewSubjectName(e.target.value)}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow"
+                    placeholder="e.g., Mathematics"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Target Score (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={newSubjectTarget}
+                    onChange={(e) => setNewSubjectTarget(e.target.value ? Number(e.target.value) : '')}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow"
+                    placeholder="e.g., 90"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Color Theme</label>
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="color"
+                      value={newSubjectColor}
+                      onChange={(e) => setNewSubjectColor(e.target.value)}
+                      className="h-10 w-14 p-1 rounded border border-slate-300 cursor-pointer"
+                    />
+                    <div className="flex space-x-2">
+                      <button type="button" onClick={() => setIsAdding(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-medium transition-colors">
+                        Cancel
+                      </button>
+                      <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-medium transition-colors shadow-sm">
+                        Save
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            </form>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {isAdding && <AddSubjectModal store={store} onClose={() => setIsAdding(false)} />}
-    </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {subjects.map((subject) => (
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            key={subject.id}
+            onClick={() => onSelectSubject(subject.id)}
+            className="flex flex-col text-left bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-all group"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center"
+                style={{ backgroundColor: `${subject.color}15`, color: subject.color }}
+              >
+                <BookOpen className="w-6 h-6" />
+              </div>
+              <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-900 font-display">{subject.name}</h3>
+            {subject.targetScore && (
+              <div className="flex items-center mt-2 text-sm text-slate-500">
+                <Target className="w-4 h-4 mr-1.5 text-slate-400" />
+                Target: <span className="font-semibold text-slate-700 ml-1">{subject.targetScore}%</span>
+              </div>
+            )}
+          </motion.button>
+        ))}
+      </div>
+    </motion.div>
   );
 }

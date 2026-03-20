@@ -1,37 +1,107 @@
 import { useState, useEffect } from 'react';
+import { collection, onSnapshot, doc, setDoc, deleteDoc, query, orderBy } from 'firebase/firestore';
+import { db } from './firebase';
 import { Subject, PaperLog, DEFAULT_SUBJECTS } from './types';
+import { handleFirestoreError, OperationType } from './errorHandling';
 
-export function useStore() {
-  const [subjects, setSubjects] = useState<Subject[]>(() => {
-    const saved = localStorage.getItem('igcse_subjects');
-    return saved ? JSON.parse(saved) : DEFAULT_SUBJECTS;
-  });
-
-  const [logs, setLogs] = useState<PaperLog[]>(() => {
-    const saved = localStorage.getItem('igcse_logs');
-    return saved ? JSON.parse(saved) : [];
-  });
+export function useStore(userId: string | undefined) {
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [logs, setLogs] = useState<PaperLog[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    localStorage.setItem('igcse_subjects', JSON.stringify(subjects));
-  }, [subjects]);
+    if (!userId) {
+      setSubjects([]);
+      setLogs([]);
+      setLoading(false);
+      return;
+    }
 
-  useEffect(() => {
-    localStorage.setItem('igcse_logs', JSON.stringify(logs));
-  }, [logs]);
+    setLoading(true);
 
-  const addLog = (log: Omit<PaperLog, 'id'>) => {
-    const newLog = { ...log, id: crypto.randomUUID() };
-    setLogs(prev => [newLog, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    const subjectsRef = collection(db, `users/${userId}/subjects`);
+    const unsubscribeSubjects = onSnapshot(subjectsRef, (snapshot) => {
+      const loadedSubjects = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subject));
+      
+      if (loadedSubjects.length === 0 && snapshot.metadata.hasPendingWrites === false) {
+         DEFAULT_SUBJECTS.forEach(async (subj) => {
+            try {
+              await setDoc(doc(db, `users/${userId}/subjects`, subj.id), subj);
+            } catch (e) {
+              handleFirestoreError(e, OperationType.CREATE, `users/${userId}/subjects`);
+            }
+         });
+      } else {
+         setSubjects(loadedSubjects);
+      }
+    }, (error) => handleFirestoreError(error, OperationType.LIST, `users/${userId}/subjects`));
+
+    const logsRef = query(collection(db, `users/${userId}/logs`), orderBy('date', 'desc'));
+    const unsubscribeLogs = onSnapshot(logsRef, (snapshot) => {
+      setLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PaperLog)));
+      setLoading(false);
+    }, (error) => handleFirestoreError(error, OperationType.LIST, `users/${userId}/logs`));
+
+    return () => {
+      unsubscribeSubjects();
+      unsubscribeLogs();
+    };
+  }, [userId]);
+
+  const addLog = async (log: Omit<PaperLog, 'id'>) => {
+    if (!userId) return;
+    const id = crypto.randomUUID();
+    try {
+      const data = { ...log, id };
+      // Remove undefined fields
+      Object.keys(data).forEach(key => data[key as keyof typeof data] === undefined && delete data[key as keyof typeof data]);
+      await setDoc(doc(db, `users/${userId}/logs`, id), data);
+    } catch (e) {
+      handleFirestoreError(e, OperationType.CREATE, `users/${userId}/logs`);
+    }
   };
 
-  const deleteLog = (id: string) => {
-    setLogs(prev => prev.filter(l => l.id !== id));
+  const deleteLog = async (id: string) => {
+    if (!userId) return;
+    try {
+      await deleteDoc(doc(db, `users/${userId}/logs`, id));
+    } catch (e) {
+      handleFirestoreError(e, OperationType.DELETE, `users/${userId}/logs/${id}`);
+    }
   };
 
-  const addSubject = (subject: Omit<Subject, 'id'>) => {
-    setSubjects(prev => [...prev, { ...subject, id: crypto.randomUUID() }]);
+  const addSubject = async (subject: Omit<Subject, 'id'>) => {
+    if (!userId) return;
+    const id = crypto.randomUUID();
+    try {
+      const data = { ...subject, id };
+      // Remove undefined fields
+      Object.keys(data).forEach(key => data[key as keyof typeof data] === undefined && delete data[key as keyof typeof data]);
+      await setDoc(doc(db, `users/${userId}/subjects`, id), data);
+    } catch (e) {
+      handleFirestoreError(e, OperationType.CREATE, `users/${userId}/subjects`);
+    }
   };
 
-  return { subjects, logs, addLog, deleteLog, addSubject };
+  const updateSubject = async (id: string, data: Partial<Subject>) => {
+    if (!userId) return;
+    try {
+      const cleanData = { ...data };
+      Object.keys(cleanData).forEach(key => cleanData[key as keyof typeof cleanData] === undefined && delete cleanData[key as keyof typeof cleanData]);
+      await setDoc(doc(db, `users/${userId}/subjects`, id), cleanData, { merge: true });
+    } catch (e) {
+      handleFirestoreError(e, OperationType.UPDATE, `users/${userId}/subjects/${id}`);
+    }
+  };
+
+  const deleteSubject = async (id: string) => {
+    if (!userId) return;
+    try {
+      await deleteDoc(doc(db, `users/${userId}/subjects`, id));
+    } catch (e) {
+      handleFirestoreError(e, OperationType.DELETE, `users/${userId}/subjects/${id}`);
+    }
+  };
+
+  return { subjects, logs, loading, addLog, deleteLog, addSubject, updateSubject, deleteSubject };
 }

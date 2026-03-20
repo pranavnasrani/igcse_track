@@ -1,0 +1,22 @@
+export const IGCSE_SUBJECTS: Record<string, string> = {
+  '0580': 'Mathematics',
+  '0606': 'Additional Mathematics',
+  '0625': 'Physics',
+  '0620': 'Chemistry',
+  '0610': 'Biology',
+  '0478': 'Computer Science',
+  '0510': 'English as a Second Language',
+  '0500': 'First Language English',
+  '0450': 'Business Studies',
+  '0455': 'Economics',
+  '0470': 'History',
+  '0460': 'Geography',
+  '0400': 'Art & Design',
+  '0417': 'Information and Communication Technology',
+  '0452': 'Accounting',
+  '0680': 'Environmental Management',
+  '0520': 'French',
+  '0530': 'Spanish',
+  '0549': 'Hindi as a Second Language',
+  '0624': 'Global Perspectives'
+};

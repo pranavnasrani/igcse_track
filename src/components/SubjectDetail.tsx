@@ -1,245 +1,602 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { ArrowLeft, Plus, Search, ExternalLink, Calendar, Clock, Target, TrendingUp, FileText, CheckCircle, Edit2, Check, AlertCircle, Trash2, Settings } from 'lucide-react';
 import { useStore } from '../store';
-import { calculatePercentage, formatPaperName, generateSearchLink } from '../utils';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { format } from 'date-fns';
-import { ArrowLeft, Plus, Search, Trash2, ExternalLink, Calendar, FileText, Hash, CheckCircle, BookOpen, Target } from 'lucide-react';
-import { LogForm } from './LogForm';
+import { format, parseISO } from 'date-fns';
+import { Season } from '../types';
+import { IGCSE_SUBJECTS } from '../constants';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  ReferenceLine
+} from 'recharts';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface SubjectDetailProps {
-  store: ReturnType<typeof useStore>;
   subjectId: string;
   onBack: () => void;
+  userId: string;
 }
 
-export function SubjectDetail({ store, subjectId, onBack }: SubjectDetailProps) {
-  const { subjects, logs, deleteLog } = store;
-  const [isLogging, setIsLogging] = useState(false);
-  const [searchYear, setSearchYear] = useState(new Date().getFullYear() - 1);
-  const [searchSeason, setSearchSeason] = useState<'m' | 's' | 'w'>('s');
-  const [searchPaper, setSearchPaper] = useState(4);
-  const [searchVariant, setSearchVariant] = useState(1);
-
+export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps) {
+  const { subjects, logs, addLog, updateSubject, deleteSubject } = useStore(userId);
   const subject = subjects.find(s => s.id === subjectId);
-  if (!subject) return <div>Subject not found</div>;
+  const subjectLogs = logs.filter(l => l.subjectId === subjectId).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  const subjectLogs = logs.filter(l => l.subjectId === subjectId);
-  const averageScore = subjectLogs.length > 0 
-    ? Math.round(subjectLogs.reduce((acc, log) => acc + calculatePercentage(log.score, log.maxScore), 0) / subjectLogs.length)
-    : 0;
+  const [isAddingLog, setIsAddingLog] = useState(false);
+  const [isEditingSubject, setIsEditingSubject] = useState(false);
+  const [editSubjectData, setEditSubjectData] = useState({
+    name: '',
+    code: '',
+    color: '#6366f1',
+    targetScore: ''
+  });
 
-  const chartData = [...subjectLogs].reverse().map(log => ({
-    date: format(new Date(log.date), 'MMM dd'),
-    score: calculatePercentage(log.score, log.maxScore),
-    name: formatPaperName(log.year, log.season, log.paper, log.variant)
-  }));
+  useEffect(() => {
+    if (subject) {
+      setEditSubjectData({
+        name: subject.name,
+        code: subject.code || '',
+        color: subject.color,
+        targetScore: subject.targetScore?.toString() || ''
+      });
+    }
+  }, [subject]);
+
+  const [newLog, setNewLog] = useState({
+    year: new Date().getFullYear(),
+    season: 's' as Season,
+    paper: '1',
+    variant: '1',
+    score: '',
+    maxScore: '',
+    timeTaken: '',
+    notes: ''
+  });
+
+  const [searchYear, setSearchYear] = useState(new Date().getFullYear().toString());
+  const [searchSeason, setSearchSeason] = useState('s');
+  const [searchPaper, setSearchPaper] = useState('1');
+  const [searchVariant, setSearchVariant] = useState('1');
+
+  const chartData = useMemo(() => {
+    return [...subjectLogs].reverse().map(log => ({
+      date: format(parseISO(log.date), 'MMM dd'),
+      score: Math.round((log.score / log.maxScore) * 100),
+      label: `${log.year} ${log.season}${log.paper}${log.variant}`
+    }));
+  }, [subjectLogs]);
+
+  const averageScore = useMemo(() => {
+    if (subjectLogs.length === 0) return 0;
+    const totalPercentage = subjectLogs.reduce((acc, log) => acc + (log.score / log.maxScore) * 100, 0);
+    return Math.round(totalPercentage / subjectLogs.length);
+  }, [subjectLogs]);
+
+  if (!subject) return null;
+
+  const handleAddLog = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newLog.score && newLog.maxScore) {
+      await addLog({
+        subjectId,
+        date: new Date().toISOString(),
+        year: newLog.year,
+        season: newLog.season,
+        paper: Number(newLog.paper),
+        variant: Number(newLog.variant),
+        score: Number(newLog.score),
+        maxScore: Number(newLog.maxScore),
+        timeTaken: newLog.timeTaken ? Number(newLog.timeTaken) : undefined,
+        notes: newLog.notes
+      });
+      setIsAddingLog(false);
+      setNewLog({
+        year: new Date().getFullYear(),
+        season: 's',
+        paper: '1',
+        variant: '1',
+        score: '',
+        maxScore: '',
+        timeTaken: '',
+        notes: ''
+      });
+    }
+  };
+
+  const getSeasonName = (s: string) => {
+    if (s === 'm') return 'March';
+    if (s === 's') return 'June';
+    if (s === 'w') return 'November';
+    return s;
+  };
+
+  const handleEditCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const code = e.target.value;
+    setEditSubjectData(prev => ({ ...prev, code }));
+    if (IGCSE_SUBJECTS[code]) {
+      setEditSubjectData(prev => ({ ...prev, name: IGCSE_SUBJECTS[code] }));
+    }
+  };
+
+  const handleSaveSubject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (subject && editSubjectData.name.trim()) {
+      await updateSubject(subject.id, {
+        name: editSubjectData.name.trim(),
+        code: editSubjectData.code.trim(),
+        color: editSubjectData.color,
+        targetScore: editSubjectData.targetScore ? Number(editSubjectData.targetScore) : undefined
+      });
+      setIsEditingSubject(false);
+    }
+  };
+
+  const handleDeleteSubject = async () => {
+    if (window.confirm('Are you sure you want to delete this subject? All associated logs will remain in the database but will be orphaned.')) {
+      if (subject) {
+        await deleteSubject(subject.id);
+        onBack();
+      }
+    }
+  };
+
+  const generatePapaCambridgeUrl = (type: 'qp' | 'ms') => {
+    if (!subject?.code) return null;
+    const year2Digit = searchYear.slice(-2);
+    const paperStr = searchVariant === 'none' ? searchPaper : `${searchPaper}${searchVariant}`;
+    return `https://pastpapers.papacambridge.com/directories/CAIE/CAIE-pastpapers/upload/${subject.code}_${searchSeason}${year2Digit}_${type}_${paperStr}.pdf`;
+  };
+
+  const generateSearchUrl = () => {
+    const variantText = searchVariant === 'none' ? '' : ` variant ${searchVariant}`;
+    const query = `IGCSE ${subject.name} past paper ${searchYear} ${getSeasonName(searchSeason)} paper ${searchPaper}${variantText}`;
+    return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+  };
 
   return (
-    <div className="space-y-6">
-      <button 
-        onClick={onBack}
-        className="flex items-center text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors mb-4"
-      >
-        <ArrowLeft className="w-4 h-4 mr-1" />
-        Back to Subjects
-      </button>
-
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <motion.div
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -20 }}
+      className="space-y-6 pb-20 md:pb-0"
+    >
+      <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <div 
-            className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-sm"
-            style={{ backgroundColor: subject.color }}
+          <button
+            onClick={onBack}
+            className="p-2 hover:bg-slate-200 rounded-full transition-colors text-slate-600"
           >
-            <BookOpen className="w-6 h-6" />
-          </div>
+            <ArrowLeft className="w-6 h-6" />
+          </button>
           <div>
-            <h2 className="text-3xl font-bold tracking-tight text-slate-900">{subject.name}</h2>
-            <p className="text-sm font-medium text-slate-500">Code: {subject.code}</p>
+            <div className="flex items-center">
+              <h2 className="text-3xl font-bold text-slate-900 font-display tracking-tight flex items-center">
+                <span
+                  className="w-4 h-4 rounded-full mr-3"
+                  style={{ backgroundColor: subject.color }}
+                />
+                {subject.name}
+              </h2>
+              <span className="ml-3 text-xl text-slate-400 font-medium font-display">
+                {subject.code ? `(${subject.code})` : ''}
+              </span>
+            </div>
+            <p className="text-slate-500 mt-1">Track your performance and find past papers.</p>
           </div>
         </div>
-        <button 
-          onClick={() => setIsLogging(true)}
-          className="flex items-center justify-center px-5 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition-colors shadow-sm w-full md:w-auto"
+        <button
+          onClick={() => setIsEditingSubject(!isEditingSubject)}
+          className="p-2 hover:bg-slate-200 rounded-full transition-colors text-slate-600"
         >
-          <Plus className="w-4 h-4 mr-2" />
-          Log Paper
+          <Settings className="w-6 h-6" />
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Stats & Find Papers */}
-        <div className="space-y-6 lg:col-span-1">
-          {/* Stats */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">Overview</h3>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-500 flex items-center"><CheckCircle className="w-4 h-4 mr-2" /> Papers Done</span>
-                <span className="font-bold text-slate-900">{subjectLogs.length}</span>
+      <AnimatePresence>
+        {isEditingSubject && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <form onSubmit={handleSaveSubject} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-slate-900 font-display">Edit Subject</h3>
+                <button
+                  type="button"
+                  onClick={handleDeleteSubject}
+                  className="flex items-center text-sm text-red-600 hover:text-red-700 font-medium transition-colors"
+                >
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  Delete Subject
+                </button>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-500 flex items-center"><Target className="w-4 h-4 mr-2" /> Average Score</span>
-                <span className="font-bold text-slate-900">{averageScore}%</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Find Papers */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
-              <Search className="w-5 h-5 mr-2 text-indigo-500" />
-              Find Papers
-            </h3>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Year</label>
-                  <input 
-                    type="number" 
-                    value={searchYear} 
-                    onChange={e => setSearchYear(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Subject Code</label>
+                  <input
+                    type="text"
+                    value={editSubjectData.code}
+                    onChange={handleEditCodeChange}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow"
+                    placeholder="e.g., 0580"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Season</label>
-                  <select 
-                    value={searchSeason} 
-                    onChange={e => setSearchSeason(e.target.value as any)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  >
-                    <option value="m">Feb/March</option>
-                    <option value="s">May/June</option>
-                    <option value="w">Oct/Nov</option>
-                  </select>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Subject Name</label>
+                  <input
+                    type="text"
+                    value={editSubjectData.name}
+                    onChange={(e) => setEditSubjectData({ ...editSubjectData, name: e.target.value })}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow"
+                    placeholder="e.g., Mathematics"
+                    required
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Paper</label>
-                  <select 
-                    value={searchPaper} 
-                    onChange={e => setSearchPaper(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  >
-                    {[1, 2, 3, 4, 5, 6].map(p => <option key={p} value={p}>Paper {p}</option>)}
-                  </select>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Target Score (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={editSubjectData.targetScore}
+                    onChange={(e) => setEditSubjectData({ ...editSubjectData, targetScore: e.target.value })}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow"
+                    placeholder="e.g., 90"
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Variant</label>
-                  <select 
-                    value={searchVariant} 
-                    onChange={e => setSearchVariant(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  >
-                    {[1, 2, 3].map(v => <option key={v} value={v}>Variant {v}</option>)}
-                  </select>
-                </div>
-              </div>
-              <a 
-                href={generateSearchLink(subject.code, searchYear, searchSeason, searchPaper, searchVariant)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center w-full px-4 py-2.5 bg-slate-900 text-white text-sm font-medium rounded-xl hover:bg-slate-800 transition-colors"
-              >
-                Search Paper <ExternalLink className="w-4 h-4 ml-2" />
-              </a>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column: Chart & Logs */}
-        <div className="space-y-6 lg:col-span-2">
-          {/* Chart */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-            <h3 className="text-lg font-semibold text-slate-900 mb-6">Performance Trend</h3>
-            {chartData.length > 0 ? (
-              <div className="h-64 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dy={10} />
-                    <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dx={-10} />
-                    <Tooltip 
-                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                      formatter={(value: number) => [`${value}%`, 'Score']}
-                      labelStyle={{ color: '#64748b', marginBottom: '4px' }}
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Color Theme</label>
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="color"
+                      value={editSubjectData.color}
+                      onChange={(e) => setEditSubjectData({ ...editSubjectData, color: e.target.value })}
+                      className="h-10 w-14 p-1 rounded border border-slate-300 cursor-pointer"
                     />
-                    <Line 
-                      type="monotone" 
-                      dataKey="score" 
-                      stroke={subject.color} 
-                      strokeWidth={3}
-                      dot={{ r: 4, fill: subject.color, strokeWidth: 2, stroke: '#fff' }}
-                      activeDot={{ r: 6, strokeWidth: 0 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            ) : (
-              <div className="h-64 flex items-center justify-center text-slate-400">
-                <p>No data yet. Log a paper to see your progress!</p>
-              </div>
-            )}
-          </div>
-
-          {/* Logs List */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-            <div className="p-6 border-b border-slate-100">
-              <h3 className="text-lg font-semibold text-slate-900">Paper History</h3>
-            </div>
-            <div className="divide-y divide-slate-100">
-              {subjectLogs.length > 0 ? subjectLogs.map(log => {
-                const percentage = calculatePercentage(log.score, log.maxScore);
-                return (
-                  <div key={log.id} className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-slate-50 transition-colors group">
-                    <div className="mb-2 sm:mb-0">
-                      <p className="font-semibold text-slate-900 flex items-center">
-                        <FileText className="w-4 h-4 mr-2 text-slate-400" />
-                        {formatPaperName(log.year, log.season, log.paper, log.variant)}
-                      </p>
-                      <p className="text-sm text-slate-500 mt-1 flex items-center">
-                        <Calendar className="w-3.5 h-3.5 mr-1.5" />
-                        {format(new Date(log.date), 'MMM dd, yyyy')}
-                      </p>
-                      {log.notes && (
-                        <p className="text-sm text-slate-600 mt-2 bg-slate-100 p-2 rounded-lg inline-block">
-                          {log.notes}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex items-center space-x-6">
-                      <div className="text-right">
-                        <p className="text-xl font-bold text-slate-900" style={{ color: percentage >= 80 ? '#10b981' : percentage >= 60 ? '#f59e0b' : '#ef4444' }}>
-                          {percentage}%
-                        </p>
-                        <p className="text-xs font-medium text-slate-500">{log.score} / {log.maxScore}</p>
-                      </div>
-                      <button 
-                        onClick={() => deleteLog(log.id)}
-                        className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
-                        title="Delete log"
-                      >
-                        <Trash2 className="w-5 h-5" />
+                    <div className="flex space-x-2">
+                      <button type="button" onClick={() => setIsEditingSubject(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-medium transition-colors">
+                        Cancel
+                      </button>
+                      <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-medium transition-colors shadow-sm">
+                        Save
                       </button>
                     </div>
                   </div>
-                );
-              }) : (
-                <div className="p-8 text-center text-slate-500">
-                  No papers logged yet for this subject.
                 </div>
-              )}
+              </div>
+            </form>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Stats Overview */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-center items-center text-center">
+          <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ backgroundColor: `${subject.color}15`, color: subject.color }}>
+            <TrendingUp className="w-8 h-8" />
+          </div>
+          <p className="text-sm font-medium text-slate-500 uppercase tracking-wider">Average Score</p>
+          <p className="text-4xl font-bold text-slate-900 font-display mt-1">{averageScore}%</p>
+          <p className="text-sm text-slate-500 mt-2">{subjectLogs.length} papers completed</p>
+        </div>
+
+        {/* Target Score */}
+        {subject.targetScore && (
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-center items-center text-center">
+            <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-emerald-50 text-emerald-600">
+              <Target className="w-8 h-8" />
             </div>
+            <p className="text-sm font-medium text-slate-500 uppercase tracking-wider">Target Score</p>
+            <p className="text-4xl font-bold text-slate-900 font-display mt-1">{subject.targetScore}%</p>
+            <p className="text-sm text-slate-500 mt-2">
+              {averageScore >= subject.targetScore ? 'On track! 🎉' : `${subject.targetScore - averageScore}% to go`}
+            </p>
+          </div>
+        )}
+
+        {/* Find Papers */}
+        <div className={cn("bg-white p-6 rounded-2xl shadow-sm border border-slate-200", subject.targetScore ? "" : "md:col-span-2")}>
+          <h3 className="text-lg font-semibold text-slate-900 mb-4 font-display flex items-center">
+            <Search className="w-5 h-5 mr-2 text-slate-400" />
+            Find Past Papers
+          </h3>
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">Year</label>
+              <select
+                value={searchYear}
+                onChange={(e) => setSearchYear(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500"
+              >
+                {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">Season</label>
+              <select
+                value={searchSeason}
+                onChange={(e) => setSearchSeason(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="m">March</option>
+                <option value="s">June</option>
+                <option value="w">November</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">Paper</label>
+              <select
+                value={searchPaper}
+                onChange={(e) => setSearchPaper(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500"
+              >
+                {['1', '2', '3', '4', '5', '6'].map(v => (
+                  <option key={v} value={v}>Paper {v}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">Variant</label>
+              <select
+                value={searchVariant}
+                onChange={(e) => setSearchVariant(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500"
+              >
+                {['1', '2', '3'].map(v => (
+                  <option key={v} value={v}>Variant {v}</option>
+                ))}
+                <option value="none">No Variant</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex flex-col space-y-3">
+            {subject.code ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <a
+                  href={generatePapaCambridgeUrl('qp')!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center w-full px-4 py-2.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl font-medium transition-colors"
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  Question Paper
+                </a>
+                <a
+                  href={generatePapaCambridgeUrl('ms')!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center w-full px-4 py-2.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-xl font-medium transition-colors"
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Mark Scheme
+                </a>
+              </div>
+            ) : (
+              <div className="p-3 bg-amber-50 border border-amber-100 rounded-xl text-sm text-amber-700 flex items-start">
+                <AlertCircle className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" />
+                <p>Add a subject code (e.g., 0580) above to get direct PDF links to past papers and mark schemes.</p>
+              </div>
+            )}
+            <a
+              href={generateSearchUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center w-full px-4 py-2.5 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-xl font-medium transition-colors"
+            >
+              <Search className="w-4 h-4 mr-2" />
+              Search Google
+            </a>
           </div>
         </div>
       </div>
 
-      {isLogging && (
-        <LogForm 
-          store={store} 
-          defaultSubjectId={subjectId} 
-          onClose={() => setIsLogging(false)} 
-        />
-      )}
-    </div>
+      {/* Performance Chart */}
+      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+        <h3 className="text-lg font-semibold text-slate-900 mb-6 font-display">Performance Trend</h3>
+        <div className="h-72">
+          {chartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis dataKey="date" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} domain={[0, 100]} />
+                <Tooltip
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  labelStyle={{ fontWeight: 'bold', color: '#0f172a' }}
+                />
+                {subject.targetScore && (
+                  <ReferenceLine y={subject.targetScore} stroke="#10b981" strokeDasharray="3 3" label={{ position: 'insideTopLeft', value: 'Target', fill: '#10b981', fontSize: 12 }} />
+                )}
+                <Line
+                  type="monotone"
+                  dataKey="score"
+                  stroke={subject.color}
+                  strokeWidth={3}
+                  dot={{ r: 4, strokeWidth: 2, fill: '#fff' }}
+                  activeDot={{ r: 6, strokeWidth: 0 }}
+                  name="Score (%)"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-full flex items-center justify-center text-slate-400">
+              <p>No data yet. Log a paper to see your trend.</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Paper Logs */}
+      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-lg font-semibold text-slate-900 font-display">Paper History</h3>
+          <button
+            onClick={() => setIsAddingLog(!isAddingLog)}
+            className="flex items-center px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl font-medium transition-colors"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Log Paper
+          </button>
+        </div>
+
+        <AnimatePresence>
+          {isAddingLog && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <form onSubmit={handleAddLog} className="bg-slate-50 p-6 rounded-xl border border-slate-200 mb-6">
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-4">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">Year</label>
+                    <input
+                      type="number"
+                      value={newLog.year}
+                      onChange={(e) => setNewLog({ ...newLog, year: Number(e.target.value) })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">Season</label>
+                    <select
+                      value={newLog.season}
+                      onChange={(e) => setNewLog({ ...newLog, season: e.target.value as Season })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="m">March</option>
+                      <option value="s">June</option>
+                      <option value="w">Nov</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">Paper</label>
+                    <input
+                      type="number"
+                      value={newLog.paper}
+                      onChange={(e) => setNewLog({ ...newLog, paper: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">Variant</label>
+                    <input
+                      type="number"
+                      value={newLog.variant}
+                      onChange={(e) => setNewLog({ ...newLog, variant: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">Score</label>
+                    <input
+                      type="number"
+                      value={newLog.score}
+                      onChange={(e) => setNewLog({ ...newLog, score: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">Total</label>
+                    <input
+                      type="number"
+                      value={newLog.maxScore}
+                      onChange={(e) => setNewLog({ ...newLog, maxScore: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">Time (min)</label>
+                    <input
+                      type="number"
+                      value={newLog.timeTaken}
+                      onChange={(e) => setNewLog({ ...newLog, timeTaken: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500"
+                      placeholder="Optional"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">Notes</label>
+                    <input
+                      type="text"
+                      value={newLog.notes}
+                      onChange={(e) => setNewLog({ ...newLog, notes: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500"
+                      placeholder="e.g., Struggled with question 4"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end space-x-3">
+                  <button type="button" onClick={() => setIsAddingLog(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-xl font-medium transition-colors">
+                    Cancel
+                  </button>
+                  <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-medium transition-colors shadow-sm">
+                    Save Log
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <div className="space-y-4">
+          {subjectLogs.map((log) => {
+            const percentage = Math.round((log.score / log.maxScore) * 100);
+            return (
+              <div key={log.id} className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-slate-100 transition-colors">
+                <div className="flex items-start md:items-center space-x-4 mb-3 md:mb-0">
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold font-display" style={{ backgroundColor: subject.color }}>
+                    {percentage}%
+                  </div>
+                  <div>
+                    <p className="font-semibold text-slate-900">
+                      {log.year} {getSeasonName(log.season)} - Paper {log.paper}{log.variant}
+                    </p>
+                    <div className="flex items-center text-sm text-slate-500 mt-1 space-x-3">
+                      <span className="flex items-center"><Calendar className="w-3 h-3 mr-1" /> {format(parseISO(log.date), 'MMM dd, yyyy')}</span>
+                      {log.timeTaken && <span className="flex items-center"><Clock className="w-3 h-3 mr-1" /> {log.timeTaken} min</span>}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-col md:items-end">
+                  <p className="text-sm font-medium text-slate-700">
+                    {log.score} / {log.maxScore} marks
+                  </p>
+                  {log.notes && (
+                    <p className="text-sm text-slate-500 mt-1 italic max-w-xs truncate">
+                      "{log.notes}"
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+          {subjectLogs.length === 0 && !isAddingLog && (
+            <p className="text-center text-slate-500 py-8">No papers logged yet. Start practicing!</p>
+          )}
+        </div>
+      </div>
+    </motion.div>
   );
+}
+
+function cn(...classes: (string | undefined | null | false)[]) {
+  return classes.filter(Boolean).join(' ');
 }

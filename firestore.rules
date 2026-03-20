@@ -1,0 +1,131 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users/{userId}/subjects
+    // Document ID: auto-generated UUID
+    // Fields:
+    //   - id: string (required)
+    //   - name: string (required, max 100 chars)
+    //   - code: string (required, max 20 chars)
+    //   - color: string (required, max 20 chars)
+    //   - targetScore: number (optional, 0-100)
+    //
+    // Collection: users/{userId}/logs
+    // Document ID: auto-generated UUID
+    // Fields:
+    //   - id: string (required)
+    //   - subjectId: string (required)
+    //   - year: number (required, > 1900)
+    //   - season: string (required, in ['m', 's', 'w'])
+    //   - paper: number (required, > 0)
+    //   - variant: number (required, > 0)
+    //   - score: number (required, >= 0)
+    //   - maxScore: number (required, > 0)
+    //   - date: string (required, ISO 8601 date string)
+    //   - notes: string (optional, max 500 chars)
+    //   - timeTaken: number (optional, > 0)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function hasOnlyAllowedFields(allowedFields) {
+      return request.resource.data.keys().hasOnly(allowedFields);
+    }
+
+    function isValidString(field, minLen, maxLen) {
+      return request.resource.data[field] is string &&
+             request.resource.data[field].size() >= minLen &&
+             request.resource.data[field].size() <= maxLen;
+    }
+
+    function isValidOptionalString(field, minLen, maxLen) {
+      return !(field in request.resource.data) ||
+             (request.resource.data[field] is string &&
+              request.resource.data[field].size() >= minLen &&
+              request.resource.data[field].size() <= maxLen);
+    }
+
+    function isValidOptionalNumber(field, minVal, maxVal) {
+      return !(field in request.resource.data) ||
+             (request.resource.data[field] is number &&
+              request.resource.data[field] >= minVal &&
+              request.resource.data[field] <= maxVal);
+    }
+
+    function isValidDateString(dateStr) {
+      return dateStr is string &&
+        dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidSubject() {
+      let allowedFields = ['id', 'name', 'code', 'color', 'targetScore'];
+      return hasOnlyAllowedFields(allowedFields) &&
+             isValidString('id', 1, 100) &&
+             isValidString('name', 1, 100) &&
+             isValidString('code', 0, 20) &&
+             isValidString('color', 1, 20) &&
+             isValidOptionalNumber('targetScore', 0, 100);
+    }
+
+    function isValidLog() {
+      let allowedFields = ['id', 'subjectId', 'year', 'season', 'paper', 'variant', 'score', 'maxScore', 'date', 'notes', 'timeTaken'];
+      return hasOnlyAllowedFields(allowedFields) &&
+             isValidString('id', 1, 100) &&
+             isValidString('subjectId', 1, 100) &&
+             request.resource.data.year is number && request.resource.data.year > 1900 &&
+             request.resource.data.season in ['m', 's', 'w'] &&
+             request.resource.data.paper is number && request.resource.data.paper > 0 &&
+             request.resource.data.variant is number && request.resource.data.variant > 0 &&
+             request.resource.data.score is number && request.resource.data.score >= 0 &&
+             request.resource.data.maxScore is number && request.resource.data.maxScore > 0 &&
+             request.resource.data.score <= request.resource.data.maxScore &&
+             isValidDateString(request.resource.data.date) &&
+             isValidOptionalString('notes', 0, 500) &&
+             isValidOptionalNumber('timeTaken', 0, 10000);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      // Allow read/write to user's own document (if needed later)
+      allow read, write: if isOwner(userId);
+
+      match /subjects/{subjectId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidSubject() && request.resource.data.id == subjectId;
+        allow update: if isOwner(userId) && isValidSubject() && request.resource.data.id == subjectId;
+        allow delete: if isOwner(userId);
+      }
+
+      match /logs/{logId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidLog() && request.resource.data.id == logId;
+        allow update: if isOwner(userId) && isValidLog() && request.resource.data.id == logId;
+        allow delete: if isOwner(userId);
+      }
+    }
+  }
+}
