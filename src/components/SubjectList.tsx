@@ -52,8 +52,8 @@ export function SubjectList({ onSelectSubject, userId }: SubjectListProps) {
     >
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-3xl font-bold text-slate-900 font-display tracking-tight">Subjects</h2>
-          <p className="text-slate-500 mt-1">Manage your IGCSE subjects and track progress.</p>
+          <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-50 font-display tracking-tight transition-colors">Subjects</h2>
+          <p className="text-slate-500 dark:text-slate-400 mt-1 transition-colors">Manage your IGCSE subjects and track progress.</p>
         </div>
         <button
           onClick={() => setIsAdding(true)}
@@ -72,53 +72,53 @@ export function SubjectList({ onSelectSubject, userId }: SubjectListProps) {
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <form onSubmit={handleAddSubject} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4 font-display">Add New Subject</h3>
+            <form onSubmit={handleAddSubject} className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 mb-6 transition-colors">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-50 mb-4 font-display transition-colors">Add New Subject</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Subject Code</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 transition-colors">Subject Code</label>
                   <input
                     type="text"
                     value={newSubjectCode}
                     onChange={handleCodeChange}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow"
+                    className="w-full px-4 py-2 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
                     placeholder="e.g., 0580"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Subject Name</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 transition-colors">Subject Name</label>
                   <input
                     type="text"
                     value={newSubjectName}
                     onChange={(e) => setNewSubjectName(e.target.value)}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow"
+                    className="w-full px-4 py-2 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
                     placeholder="e.g., Mathematics"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Target Score (%)</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 transition-colors">Target Score (%)</label>
                   <input
                     type="number"
                     min="0"
                     max="100"
                     value={newSubjectTarget}
                     onChange={(e) => setNewSubjectTarget(e.target.value ? Number(e.target.value) : '')}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow"
+                    className="w-full px-4 py-2 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
                     placeholder="e.g., 90"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Color Theme</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 transition-colors">Color Theme</label>
                   <div className="flex items-center space-x-3">
                     <input
                       type="color"
                       value={newSubjectColor}
                       onChange={(e) => setNewSubjectColor(e.target.value)}
-                      className="h-10 w-14 p-1 rounded border border-slate-300 cursor-pointer"
+                      className="h-10 w-14 p-1 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 cursor-pointer transition-colors"
                     />
                     <div className="flex space-x-2">
-                      <button type="button" onClick={() => setIsAdding(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-medium transition-colors">
+                      <button type="button" onClick={() => setIsAdding(false)} className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl font-medium transition-colors">
                         Cancel
                       </button>
                       <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-medium transition-colors shadow-sm">
@@ -140,7 +140,7 @@ export function SubjectList({ onSelectSubject, userId }: SubjectListProps) {
             whileTap={{ scale: 0.98 }}
             key={subject.id}
             onClick={() => onSelectSubject(subject.id)}
-            className="flex flex-col text-left bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-all group"
+            className="flex flex-col text-left bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 hover:shadow-md transition-all group"
           >
             <div className="flex items-center justify-between mb-4">
               <div
@@ -149,13 +149,13 @@ export function SubjectList({ onSelectSubject, userId }: SubjectListProps) {
               >
                 <BookOpen className="w-6 h-6" />
               </div>
-              <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" />
+              <ChevronRight className="w-5 h-5 text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors" />
             </div>
-            <h3 className="text-xl font-bold text-slate-900 font-display">{subject.name}</h3>
+            <h3 className="text-xl font-bold text-slate-900 dark:text-slate-50 font-display transition-colors">{subject.name}</h3>
             {subject.targetScore && (
-              <div className="flex items-center mt-2 text-sm text-slate-500">
-                <Target className="w-4 h-4 mr-1.5 text-slate-400" />
-                Target: <span className="font-semibold text-slate-700 ml-1">{subject.targetScore}%</span>
+              <div className="flex items-center mt-2 text-sm text-slate-500 dark:text-slate-400 transition-colors">
+                <Target className="w-4 h-4 mr-1.5 text-slate-400 dark:text-slate-500" />
+                Target: <span className="font-semibold text-slate-700 dark:text-slate-300 ml-1">{subject.targetScore}%</span>
               </div>
             )}
           </motion.button>

@@ -61,46 +61,46 @@ export function Dashboard({ userId }: DashboardProps) {
       className="space-y-6 pb-20 md:pb-0"
     >
       <div>
-        <h2 className="text-3xl font-bold text-slate-900 font-display tracking-tight">Dashboard</h2>
-        <p className="text-slate-500 mt-1">Here's an overview of your IGCSE preparation.</p>
+        <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-50 font-display tracking-tight transition-colors">Dashboard</h2>
+        <p className="text-slate-500 dark:text-slate-400 mt-1 transition-colors">Here's an overview of your IGCSE preparation.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
-          <div className="w-14 h-14 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-center space-x-4 transition-colors">
+          <div className="w-14 h-14 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center transition-colors">
             <BookOpen className="w-7 h-7" />
           </div>
           <div>
-            <p className="text-sm font-medium text-slate-500 uppercase tracking-wider">Total Papers</p>
-            <p className="text-3xl font-bold text-slate-900 font-display">{stats.totalPapers}</p>
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider transition-colors">Total Papers</p>
+            <p className="text-3xl font-bold text-slate-900 dark:text-slate-50 font-display transition-colors">{stats.totalPapers}</p>
           </div>
         </div>
         
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
-          <div className="w-14 h-14 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-center space-x-4 transition-colors">
+          <div className="w-14 h-14 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center transition-colors">
             <Award className="w-7 h-7" />
           </div>
           <div>
-            <p className="text-sm font-medium text-slate-500 uppercase tracking-wider">Average Score</p>
-            <p className="text-3xl font-bold text-slate-900 font-display">{stats.averageScore}%</p>
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider transition-colors">Average Score</p>
+            <p className="text-3xl font-bold text-slate-900 dark:text-slate-50 font-display transition-colors">{stats.averageScore}%</p>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
-          <div className="w-14 h-14 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-center space-x-4 transition-colors">
+          <div className="w-14 h-14 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center transition-colors">
             <Activity className="w-7 h-7" />
           </div>
           <div>
-            <p className="text-sm font-medium text-slate-500 uppercase tracking-wider">Active Subjects</p>
-            <p className="text-3xl font-bold text-slate-900 font-display">{subjects.length}</p>
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider transition-colors">Active Subjects</p>
+            <p className="text-3xl font-bold text-slate-900 dark:text-slate-50 font-display transition-colors">{subjects.length}</p>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-          <h3 className="text-lg font-semibold text-slate-900 mb-6 font-display flex items-center">
-            <TrendingUp className="w-5 h-5 mr-2 text-slate-400" />
+        <div className="lg:col-span-2 bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-50 mb-6 font-display flex items-center transition-colors">
+            <TrendingUp className="w-5 h-5 mr-2 text-slate-400 dark:text-slate-500" />
             Performance by Subject
           </h3>
           <div className="h-72">
@@ -135,15 +135,15 @@ export function Dashboard({ userId }: DashboardProps) {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex items-center justify-center text-slate-400">
+              <div className="h-full flex items-center justify-center text-slate-400 dark:text-slate-500 transition-colors">
                 <p>No data yet. Log some papers to see your performance.</p>
               </div>
             )}
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-          <h3 className="text-lg font-semibold text-slate-900 mb-6 font-display">Recent Activity</h3>
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-50 mb-6 font-display transition-colors">Recent Activity</h3>
           <div className="space-y-4">
             {stats.recentLogs.length > 0 ? (
               stats.recentLogs.map(log => {
@@ -152,16 +152,16 @@ export function Dashboard({ userId }: DashboardProps) {
                 const percentage = Math.round((log.score / log.maxScore) * 100);
                 
                 return (
-                  <div key={log.id} className="flex items-center p-3 rounded-xl hover:bg-slate-50 transition-colors">
+                  <div key={log.id} className="flex items-center p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                     <div 
-                      className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm mr-4 flex-shrink-0"
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm mr-4 flex-shrink-0 shadow-sm"
                       style={{ backgroundColor: subject.color }}
                     >
                       {percentage}%
                     </div>
                     <div className="overflow-hidden">
-                      <p className="text-sm font-semibold text-slate-900 truncate">{subject.name}</p>
-                      <p className="text-xs text-slate-500 truncate">
+                      <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate transition-colors">{subject.name}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate transition-colors">
                         {log.year} {getSeasonName(log.season)} p{log.paper}v{log.variant} • {log.score}/{log.maxScore}
                       </p>
                     </div>
@@ -169,7 +169,7 @@ export function Dashboard({ userId }: DashboardProps) {
                 );
               })
             ) : (
-              <p className="text-sm text-slate-500 text-center py-4">No recent activity.</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-4 transition-colors">No recent activity.</p>
             )}
           </div>
         </div>

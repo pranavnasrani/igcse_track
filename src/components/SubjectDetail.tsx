@@ -169,29 +169,29 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
         <div className="flex items-center space-x-4">
           <button
             onClick={onBack}
-            className="p-2 hover:bg-slate-200 rounded-full transition-colors text-slate-600"
+            className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-600 dark:text-slate-400"
           >
             <ArrowLeft className="w-6 h-6" />
           </button>
           <div>
             <div className="flex items-center">
-              <h2 className="text-3xl font-bold text-slate-900 font-display tracking-tight flex items-center">
+              <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-50 font-display tracking-tight flex items-center transition-colors">
                 <span
                   className="w-4 h-4 rounded-full mr-3"
                   style={{ backgroundColor: subject.color }}
                 />
                 {subject.name}
               </h2>
-              <span className="ml-3 text-xl text-slate-400 font-medium font-display">
+              <span className="ml-3 text-xl text-slate-400 dark:text-slate-500 font-medium font-display transition-colors">
                 {subject.code ? `(${subject.code})` : ''}
               </span>
             </div>
-            <p className="text-slate-500 mt-1">Track your performance and find past papers.</p>
+            <p className="text-slate-500 dark:text-slate-400 mt-1 transition-colors">Track your performance and find past papers.</p>
           </div>
         </div>
         <button
           onClick={() => setIsEditingSubject(!isEditingSubject)}
-          className="p-2 hover:bg-slate-200 rounded-full transition-colors text-slate-600"
+          className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-600 dark:text-slate-400"
         >
           <Settings className="w-6 h-6" />
         </button>
@@ -205,13 +205,13 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <form onSubmit={handleSaveSubject} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
+            <form onSubmit={handleSaveSubject} className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 mb-6 transition-colors">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-slate-900 font-display">Edit Subject</h3>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-50 font-display transition-colors">Edit Subject</h3>
                 <button
                   type="button"
                   onClick={handleDeleteSubject}
-                  className="flex items-center text-sm text-red-600 hover:text-red-700 font-medium transition-colors"
+                  className="flex items-center text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium transition-colors"
                 >
                   <Trash2 className="w-4 h-4 mr-1" />
                   Delete Subject
@@ -219,49 +219,49 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Subject Code</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 transition-colors">Subject Code</label>
                   <input
                     type="text"
                     value={editSubjectData.code}
                     onChange={handleEditCodeChange}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow"
+                    className="w-full px-4 py-2 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
                     placeholder="e.g., 0580"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Subject Name</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 transition-colors">Subject Name</label>
                   <input
                     type="text"
                     value={editSubjectData.name}
                     onChange={(e) => setEditSubjectData({ ...editSubjectData, name: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow"
+                    className="w-full px-4 py-2 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
                     placeholder="e.g., Mathematics"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Target Score (%)</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 transition-colors">Target Score (%)</label>
                   <input
                     type="number"
                     min="0"
                     max="100"
                     value={editSubjectData.targetScore}
                     onChange={(e) => setEditSubjectData({ ...editSubjectData, targetScore: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow"
+                    className="w-full px-4 py-2 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
                     placeholder="e.g., 90"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Color Theme</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 transition-colors">Color Theme</label>
                   <div className="flex items-center space-x-3">
                     <input
                       type="color"
                       value={editSubjectData.color}
                       onChange={(e) => setEditSubjectData({ ...editSubjectData, color: e.target.value })}
-                      className="h-10 w-14 p-1 rounded border border-slate-300 cursor-pointer"
+                      className="h-10 w-14 p-1 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 cursor-pointer transition-colors"
                     />
                     <div className="flex space-x-2">
-                      <button type="button" onClick={() => setIsEditingSubject(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-medium transition-colors">
+                      <button type="button" onClick={() => setIsEditingSubject(false)} className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl font-medium transition-colors">
                         Cancel
                       </button>
                       <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-medium transition-colors shadow-sm">
