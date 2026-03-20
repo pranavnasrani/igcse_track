@@ -1,0 +1,17 @@
+{
+  "name": "IGCSE Track",
+  "short_name": "IGCSE Track",
+  "description": "Track your IGCSE subjects, target scores, and past papers.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#4f46e5",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

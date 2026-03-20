@@ -23,7 +23,7 @@ interface SubjectDetailProps {
 }
 
 export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps) {
-  const { subjects, logs, addLog, updateSubject, deleteSubject } = useStore(userId);
+  const { subjects, logs, addLog, deleteLog, updateSubject, deleteSubject } = useStore(userId);
   const subject = subjects.find(s => s.id === subjectId);
   const subjectLogs = logs.filter(l => l.subjectId === subjectId).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -576,11 +576,24 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
                   </div>
                 </div>
                 <div className="flex flex-col md:items-end">
-                  <p className="text-sm font-medium text-slate-700">
-                    {log.score} / {log.maxScore} marks
-                  </p>
+                  <div className="flex items-center space-x-3 mb-1">
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300 transition-colors">
+                      {log.score} / {log.maxScore} marks
+                    </p>
+                    <button
+                      onClick={() => {
+                        if (window.confirm('Are you sure you want to delete this paper log?')) {
+                          deleteLog(log.id);
+                        }
+                      }}
+                      className="p-1 text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 transition-colors rounded-full hover:bg-red-50 dark:hover:bg-red-500/10"
+                      title="Delete log"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                   {log.notes && (
-                    <p className="text-sm text-slate-500 mt-1 italic max-w-xs truncate">
+                    <p className="text-sm text-slate-500 dark:text-slate-400 italic max-w-xs truncate transition-colors">
                       "{log.notes}"
                     </p>
                   )}
