@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpen, Plus, ChevronRight, Target } from 'lucide-react';
+import { BookOpen, Plus, ChevronRight, Target, X } from 'lucide-react';
 import { useStore } from '../store';
 import { Subject } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -55,83 +55,9 @@ export function SubjectList({ onSelectSubject, userId }: SubjectListProps) {
           <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-50 font-display tracking-tight transition-colors">Subjects</h2>
           <p className="text-slate-500 dark:text-slate-400 mt-1 transition-colors">Manage your IGCSE subjects and track progress.</p>
         </div>
-        <button
-          onClick={() => setIsAdding(true)}
-          className="flex items-center px-4 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors shadow-sm font-medium"
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          Add Subject
-        </button>
       </div>
 
-      <AnimatePresence>
-        {isAdding && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
-          >
-            <form onSubmit={handleAddSubject} className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 mb-6 transition-colors">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-50 mb-4 font-display transition-colors">Add New Subject</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 transition-colors">Subject Code</label>
-                  <input
-                    type="text"
-                    value={newSubjectCode}
-                    onChange={handleCodeChange}
-                    className="w-full px-4 py-2 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                    placeholder="e.g., 0580"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 transition-colors">Subject Name</label>
-                  <input
-                    type="text"
-                    value={newSubjectName}
-                    onChange={(e) => setNewSubjectName(e.target.value)}
-                    className="w-full px-4 py-2 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                    placeholder="e.g., Mathematics"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 transition-colors">Target Score (%)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={newSubjectTarget}
-                    onChange={(e) => setNewSubjectTarget(e.target.value ? Number(e.target.value) : '')}
-                    className="w-full px-4 py-2 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                    placeholder="e.g., 90"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 transition-colors">Color Theme</label>
-                  <div className="flex items-center space-x-3">
-                    <input
-                      type="color"
-                      value={newSubjectColor}
-                      onChange={(e) => setNewSubjectColor(e.target.value)}
-                      className="h-10 w-14 p-1 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 cursor-pointer transition-colors"
-                    />
-                    <div className="flex space-x-2">
-                      <button type="button" onClick={() => setIsAdding(false)} className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl font-medium transition-colors">
-                        Cancel
-                      </button>
-                      <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-medium transition-colors shadow-sm">
-                        Save
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </form>
-          </motion.div>
-        )}
-      </AnimatePresence>
+
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {subjects.map((subject) => (
@@ -140,7 +66,7 @@ export function SubjectList({ onSelectSubject, userId }: SubjectListProps) {
             whileTap={{ scale: 0.98 }}
             key={subject.id}
             onClick={() => onSelectSubject(subject.id)}
-            className="flex flex-col text-left bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 hover:shadow-md transition-all group"
+            className="flex flex-col text-left bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 hover:shadow-md transition-all group"
           >
             <div className="flex items-center justify-between mb-4">
               <div
@@ -161,6 +87,93 @@ export function SubjectList({ onSelectSubject, userId }: SubjectListProps) {
           </motion.button>
         ))}
       </div>
+
+      {/* Add Subject Modal */}
+      <AnimatePresence>
+        {isAdding && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-slate-200 dark:border-slate-800"
+            >
+              <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center sticky top-0 bg-white dark:bg-slate-900 z-10">
+                <h3 className="text-xl font-bold text-slate-900 dark:text-slate-50 font-display transition-colors">Add New Subject</h3>
+                <button onClick={() => setIsAdding(false)} className="text-slate-400 hover:text-slate-500 dark:hover:text-slate-300 transition-colors">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              <form onSubmit={handleAddSubject} className="p-6 transition-colors">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 transition-colors">Subject Code</label>
+                    <input
+                      type="text"
+                      value={newSubjectCode}
+                      onChange={handleCodeChange}
+                      className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                      placeholder="e.g., 0580"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 transition-colors">Subject Name</label>
+                    <input
+                      type="text"
+                      value={newSubjectName}
+                      onChange={(e) => setNewSubjectName(e.target.value)}
+                      className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                      placeholder="e.g., Mathematics"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 transition-colors">Target Score (%)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={newSubjectTarget}
+                      onChange={(e) => setNewSubjectTarget(e.target.value ? Number(e.target.value) : '')}
+                      className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                      placeholder="e.g., 90"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 transition-colors">Color Theme</label>
+                    <input
+                      type="color"
+                      value={newSubjectColor}
+                      onChange={(e) => setNewSubjectColor(e.target.value)}
+                      className="h-10 w-full p-1 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 cursor-pointer transition-colors"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end space-x-3">
+                  <button type="button" onClick={() => setIsAdding(false)} className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl font-medium transition-colors">
+                    Cancel
+                  </button>
+                  <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-medium transition-colors shadow-sm">
+                    Save Subject
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Floating Action Button */}
+      <motion.button
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => {
+          setIsAdding(true);
+        }}
+        className="fixed bottom-20 right-6 md:bottom-8 md:right-8 w-14 h-14 bg-indigo-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-indigo-700 transition-colors z-50"
+      >
+        <Plus className="w-6 h-6" />
+      </motion.button>
     </motion.div>
   );
 }

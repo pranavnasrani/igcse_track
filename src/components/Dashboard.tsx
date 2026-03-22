@@ -66,8 +66,8 @@ export function Dashboard({ userId }: DashboardProps) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-center space-x-4 transition-colors">
-          <div className="w-14 h-14 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center transition-colors">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-center space-x-4 transition-colors">
+          <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center transition-colors shadow-sm">
             <BookOpen className="w-7 h-7" />
           </div>
           <div>
@@ -76,8 +76,8 @@ export function Dashboard({ userId }: DashboardProps) {
           </div>
         </div>
         
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-center space-x-4 transition-colors">
-          <div className="w-14 h-14 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center transition-colors">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-center space-x-4 transition-colors">
+          <div className="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center transition-colors shadow-sm">
             <Award className="w-7 h-7" />
           </div>
           <div>
@@ -86,8 +86,8 @@ export function Dashboard({ userId }: DashboardProps) {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-center space-x-4 transition-colors">
-          <div className="w-14 h-14 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center transition-colors">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-center space-x-4 transition-colors">
+          <div className="w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center transition-colors shadow-sm">
             <Activity className="w-7 h-7" />
           </div>
           <div>
@@ -98,7 +98,7 @@ export function Dashboard({ userId }: DashboardProps) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
+        <div className="lg:col-span-2 bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
           <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-50 mb-6 font-display flex items-center transition-colors">
             <TrendingUp className="w-5 h-5 mr-2 text-slate-400 dark:text-slate-500" />
             Performance by Subject
@@ -142,7 +142,7 @@ export function Dashboard({ userId }: DashboardProps) {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
           <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-50 mb-6 font-display transition-colors">Recent Activity</h3>
           <div className="space-y-4">
             {stats.recentLogs.length > 0 ? (
@@ -152,9 +152,9 @@ export function Dashboard({ userId }: DashboardProps) {
                 const percentage = Math.round((log.score / log.maxScore) * 100);
                 
                 return (
-                  <div key={log.id} className="flex items-center p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                  <div key={log.id} className="flex items-center p-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-100 dark:hover:border-slate-800">
                     <div 
-                      className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm mr-4 flex-shrink-0 shadow-sm"
+                      className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-sm mr-4 flex-shrink-0 shadow-sm"
                       style={{ backgroundColor: subject.color }}
                     >
                       {percentage}%
