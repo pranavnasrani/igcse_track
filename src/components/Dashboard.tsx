@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useStore } from '../store';
-import { BookOpen, TrendingUp, Award, Activity } from 'lucide-react';
+import { BookOpen, TrendingUp, Award, Activity, Search } from 'lucide-react';
 import {
   BarChart,
   Bar,
@@ -19,6 +19,94 @@ interface DashboardProps {
 
 export function Dashboard({ userId }: DashboardProps) {
   const { subjects, logs } = useStore(userId);
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [parsedSearch, setParsedSearch] = useState<{
+    season?: string;
+    year?: number;
+    paper?: number;
+    variant?: number;
+    subjectId?: string;
+  }>({});
+
+  const handleSmartSearch = (query: string) => {
+    setSearchQuery(query);
+    if (!query.trim()) {
+      setParsedSearch({});
+      return;
+    }
+
+    const lowerQuery = query.toLowerCase();
+    const parsed: any = {};
+
+    // 1. Extract standard shorthand like s23, m22, w21
+    const shorthandMatch = lowerQuery.match(/\b([msw])(\d{2})\b/);
+    if (shorthandMatch) {
+      parsed.season = shorthandMatch[1];
+      parsed.year = parseInt(`20${shorthandMatch[2]}`);
+    } else {
+      if (/(march|\bm\b)/.test(lowerQuery)) parsed.season = 'm';
+      else if (/(june|may|\bs\b)/.test(lowerQuery)) parsed.season = 's';
+      else if (/(nov|oct|november|\bw\b)/.test(lowerQuery)) parsed.season = 'w';
+
+      const yearMatch = lowerQuery.match(/\b(20\d{2})\b/);
+      if (yearMatch) parsed.year = parseInt(yearMatch[1]);
+    }
+
+    // 2. Extract paper and variant
+    const pvMatch = lowerQuery.match(/\b(?:p|qp|paper\s*)?([1-6])([1-3])\b/);
+    if (pvMatch) {
+      parsed.paper = parseInt(pvMatch[1]);
+      parsed.variant = parseInt(pvMatch[2]);
+    } else {
+      const pMatch = lowerQuery.match(/\b(?:paper|p)\s*([1-6])\b/);
+      if (pMatch) parsed.paper = parseInt(pMatch[1]);
+
+      const vMatch = lowerQuery.match(/\b(?:variant|v)\s*([1-3])\b/);
+      if (vMatch) parsed.variant = parseInt(vMatch[1]);
+    }
+
+    // 3. Extract subject
+    const subjectMatch = subjects.find(s => 
+      lowerQuery.includes(s.name.toLowerCase()) || 
+      (s.code && lowerQuery.includes(s.code.toLowerCase()))
+    );
+    if (subjectMatch) {
+      parsed.subjectId = subjectMatch.id;
+    }
+
+    setParsedSearch(parsed);
+  };
+
+  const getSeasonName = (s: string) => {
+    if (s === 'm') return 'March';
+    if (s === 's') return 'June';
+    if (s === 'w') return 'November';
+    return s;
+  };
+
+  const filteredLogs = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return [...logs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
+    }
+
+    return logs.filter(log => {
+      if (parsedSearch.season && log.season !== parsedSearch.season) return false;
+      if (parsedSearch.year && log.year !== parsedSearch.year) return false;
+      if (parsedSearch.paper && log.paper !== parsedSearch.paper) return false;
+      if (parsedSearch.variant && log.variant !== parsedSearch.variant) return false;
+      if (parsedSearch.subjectId && log.subjectId !== parsedSearch.subjectId) return false;
+      
+      // Fallback to fuzzy search if no specific fields were parsed
+      if (Object.keys(parsedSearch).length === 0) {
+         const subject = subjects.find(s => s.id === log.subjectId);
+         const searchStr = `${subject?.name} ${subject?.code} ${log.year} ${getSeasonName(log.season)} p${log.paper}v${log.variant} ${log.notes || ''}`.toLowerCase();
+         if (!searchStr.includes(searchQuery.toLowerCase())) return false;
+      }
+
+      return true;
+    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [logs, searchQuery, parsedSearch, subjects]);
 
   const stats = useMemo(() => {
     const totalPapers = logs.length;
@@ -45,13 +133,6 @@ export function Dashboard({ userId }: DashboardProps) {
       };
     }).filter(data => data.papers > 0).slice(0, 6); // Top 6 active subjects
   }, [subjects, logs]);
-
-  const getSeasonName = (s: string) => {
-    if (s === 'm') return 'March';
-    if (s === 's') return 'June';
-    if (s === 'w') return 'November';
-    return s;
-  };
 
   return (
     <motion.div
@@ -120,8 +201,15 @@ export function Dashboard({ userId }: DashboardProps) {
                   />
                   <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} domain={[0, 100]} />
                   <Tooltip
-                    cursor={{ fill: '#f8fafc' }}
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    cursor={{ fill: 'rgba(148, 163, 184, 0.1)' }}
+                    contentStyle={{ 
+                      backgroundColor: '#ffffff',
+                      color: '#0f172a',
+                      borderRadius: '12px', 
+                      border: 'none', 
+                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' 
+                    }}
+                    itemStyle={{ color: '#0f172a' }}
                     formatter={(value: number, name: string) => [
                       name === 'average' ? `${value}%` : value, 
                       name === 'average' ? 'Avg Score' : 'Papers Done'
@@ -142,11 +230,29 @@ export function Dashboard({ userId }: DashboardProps) {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-50 mb-6 font-display transition-colors">Recent Activity</h3>
-          <div className="space-y-4">
-            {stats.recentLogs.length > 0 ? (
-              stats.recentLogs.map(log => {
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors flex flex-col">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-50 font-display transition-colors">
+              {searchQuery.trim() ? 'Search Results' : 'Recent Activity'}
+            </h3>
+          </div>
+          
+          <div className="relative mb-4">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-4 w-4 text-slate-400" />
+            </div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => handleSmartSearch(e.target.value)}
+              placeholder="Search done papers (e.g. 'Math s23 p42')"
+              className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-colors text-sm"
+            />
+          </div>
+
+          <div className="space-y-4 overflow-y-auto flex-1 max-h-[400px] pr-2">
+            {filteredLogs.length > 0 ? (
+              filteredLogs.map(log => {
                 const subject = subjects.find(s => s.id === log.subjectId);
                 if (!subject) return null;
                 const percentage = Math.round((log.score / log.maxScore) * 100);
@@ -169,7 +275,9 @@ export function Dashboard({ userId }: DashboardProps) {
                 );
               })
             ) : (
-              <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-4 transition-colors">No recent activity.</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-8 transition-colors">
+                {searchQuery.trim() ? 'No papers found matching your search.' : 'No recent activity.'}
+              </p>
             )}
           </div>
         </div>

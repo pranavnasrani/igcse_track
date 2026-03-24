@@ -63,6 +63,51 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
   const [searchSeason, setSearchSeason] = useState('s');
   const [searchPaper, setSearchPaper] = useState('1');
   const [searchVariant, setSearchVariant] = useState('1');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const handleSmartSearch = (query: string) => {
+    setSearchQuery(query);
+    const lowerQuery = query.toLowerCase();
+
+    let newSeason = searchSeason;
+    let newYear = searchYear;
+    let newPaper = searchPaper;
+    let newVariant = searchVariant;
+
+    // 1. Extract standard shorthand like s23, m22, w21
+    const shorthandMatch = lowerQuery.match(/\b([msw])(\d{2})\b/);
+    if (shorthandMatch) {
+      newSeason = shorthandMatch[1];
+      newYear = `20${shorthandMatch[2]}`;
+    } else {
+      // Fallback words
+      if (/(march|\bm\b)/.test(lowerQuery)) newSeason = 'm';
+      else if (/(june|may|\bs\b)/.test(lowerQuery)) newSeason = 's';
+      else if (/(nov|oct|november|\bw\b)/.test(lowerQuery)) newSeason = 'w';
+
+      const yearMatch = lowerQuery.match(/\b(20\d{2})\b/);
+      if (yearMatch) newYear = yearMatch[1];
+    }
+
+    // 2. Extract paper and variant
+    // Matches p42, qp42, 42 (as a standalone word)
+    const pvMatch = lowerQuery.match(/\b(?:p|qp|paper\s*)?([1-6])([1-3])\b/);
+    if (pvMatch) {
+      newPaper = pvMatch[1];
+      newVariant = pvMatch[2];
+    } else {
+      const pMatch = lowerQuery.match(/\b(?:paper|p)\s*([1-6])\b/);
+      if (pMatch) newPaper = pMatch[1];
+
+      const vMatch = lowerQuery.match(/\b(?:variant|v)\s*([1-3])\b/);
+      if (vMatch) newVariant = vMatch[1];
+    }
+
+    setSearchSeason(newSeason);
+    setSearchYear(newYear);
+    setSearchPaper(newPaper);
+    setSearchVariant(newVariant);
+  };
 
   const chartData = useMemo(() => {
     return [...subjectLogs].reverse().map(log => ({
@@ -314,6 +359,15 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
             <Search className="w-5 h-5 mr-2 text-slate-400 dark:text-slate-500" />
             Find Past Papers
           </h3>
+          <div className="mb-4">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => handleSmartSearch(e.target.value)}
+              placeholder="Smart search (e.g., 's23 p42' or 'June 2023 Paper 4')"
+              className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-colors"
+            />
+          </div>
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wider transition-colors">Year</label>
@@ -633,6 +687,13 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => {
+          setNewLog(prev => ({
+            ...prev,
+            year: parseInt(searchYear),
+            season: searchSeason as Season,
+            paper: searchPaper,
+            variant: searchVariant === 'none' ? '1' : searchVariant
+          }));
           setIsAddingLog(true);
         }}
         className="fixed bottom-20 right-6 md:bottom-8 md:right-8 w-14 h-14 bg-indigo-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-indigo-700 transition-colors z-50"
