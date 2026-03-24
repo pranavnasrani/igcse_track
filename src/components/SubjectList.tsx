@@ -60,32 +60,51 @@ export function SubjectList({ onSelectSubject, userId }: SubjectListProps) {
 
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {subjects.map((subject) => (
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            key={subject.id}
-            onClick={() => onSelectSubject(subject.id)}
-            className="flex flex-col text-left bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 hover:shadow-md transition-all group"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center"
-                style={{ backgroundColor: `${subject.color}15`, color: subject.color }}
-              >
-                <BookOpen className="w-6 h-6" />
-              </div>
-              <ChevronRight className="w-5 h-5 text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors" />
+        {subjects.length === 0 ? (
+          <div className="col-span-full flex flex-col items-center justify-center py-20 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 border-dashed">
+            <div className="w-20 h-20 bg-indigo-50 dark:bg-indigo-500/10 rounded-full flex items-center justify-center mb-6">
+              <BookOpen className="w-10 h-10 text-indigo-500 dark:text-indigo-400" />
             </div>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-slate-50 font-display transition-colors">{subject.name}</h3>
-            {subject.targetScore && (
-              <div className="flex items-center mt-2 text-sm text-slate-500 dark:text-slate-400 transition-colors">
-                <Target className="w-4 h-4 mr-1.5 text-slate-400 dark:text-slate-500" />
-                Target: <span className="font-semibold text-slate-700 dark:text-slate-300 ml-1">{subject.targetScore}%</span>
+            <h3 className="text-xl font-bold text-slate-900 dark:text-slate-50 font-display mb-2">No subjects yet</h3>
+            <p className="text-slate-500 dark:text-slate-400 text-center max-w-sm mb-8">
+              Start tracking your IGCSE progress by adding your first subject.
+            </p>
+            <button
+              onClick={() => setIsAdding(true)}
+              className="flex items-center px-6 py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              Add Subject
+            </button>
+          </div>
+        ) : (
+          subjects.map((subject) => (
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              key={subject.id}
+              onClick={() => onSelectSubject(subject.id)}
+              className="flex flex-col text-left bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 hover:shadow-md transition-all group"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center"
+                  style={{ backgroundColor: `${subject.color}15`, color: subject.color }}
+                >
+                  <BookOpen className="w-6 h-6" />
+                </div>
+                <ChevronRight className="w-5 h-5 text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors" />
               </div>
-            )}
-          </motion.button>
-        ))}
+              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-50 font-display transition-colors">{subject.name}</h3>
+              {subject.targetScore && (
+                <div className="flex items-center mt-2 text-sm text-slate-500 dark:text-slate-400 transition-colors">
+                  <Target className="w-4 h-4 mr-1.5 text-slate-400 dark:text-slate-500" />
+                  Target: <span className="font-semibold text-slate-700 dark:text-slate-300 ml-1">{subject.targetScore}%</span>
+                </div>
+              )}
+            </motion.button>
+          ))
+        )}
       </div>
 
       {/* Add Subject Modal */}

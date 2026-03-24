@@ -2,30 +2,33 @@ import React, { useState } from 'react';
 import { useStore } from '../store';
 import { X } from 'lucide-react';
 
+import { PaperLog } from '../types';
+
 interface LogFormProps {
   store: ReturnType<typeof useStore>;
   defaultSubjectId?: string;
+  existingLog?: PaperLog;
   onClose: () => void;
 }
 
-export function LogForm({ store, defaultSubjectId, onClose }: LogFormProps) {
-  const { subjects, addLog } = store;
+export function LogForm({ store, defaultSubjectId, existingLog, onClose }: LogFormProps) {
+  const { subjects, addLog, updateLog } = store;
   
-  const [subjectId, setSubjectId] = useState(defaultSubjectId || subjects[0]?.id || '');
-  const [year, setYear] = useState(new Date().getFullYear() - 1);
-  const [season, setSeason] = useState<'m' | 's' | 'w'>('s');
-  const [paper, setPaper] = useState(4);
-  const [variant, setVariant] = useState(1);
-  const [score, setScore] = useState('');
-  const [maxScore, setMaxScore] = useState('80');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [notes, setNotes] = useState('');
+  const [subjectId, setSubjectId] = useState(existingLog?.subjectId || defaultSubjectId || subjects[0]?.id || '');
+  const [year, setYear] = useState(existingLog?.year || new Date().getFullYear() - 1);
+  const [season, setSeason] = useState<'m' | 's' | 'w'>(existingLog?.season || 's');
+  const [paper, setPaper] = useState(existingLog?.paper || 4);
+  const [variant, setVariant] = useState(existingLog?.variant || 1);
+  const [score, setScore] = useState(existingLog?.score?.toString() || '');
+  const [maxScore, setMaxScore] = useState(existingLog?.maxScore?.toString() || '80');
+  const [date, setDate] = useState(existingLog?.date ? new Date(existingLog.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
+  const [notes, setNotes] = useState(existingLog?.notes || '');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!subjectId || !score || !maxScore || !date) return;
 
-    addLog({
+    const logData = {
       subjectId,
       year,
       season,
@@ -35,7 +38,13 @@ export function LogForm({ store, defaultSubjectId, onClose }: LogFormProps) {
       maxScore: Number(maxScore),
       date: new Date(date).toISOString(),
       notes: notes.trim() || undefined
-    });
+    };
+
+    if (existingLog) {
+      updateLog(existingLog.id, logData);
+    } else {
+      addLog(logData);
+    }
     
     onClose();
   };
@@ -44,7 +53,7 @@ export function LogForm({ store, defaultSubjectId, onClose }: LogFormProps) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
       <div className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between p-6 border-b border-slate-100">
-          <h2 className="text-xl font-bold text-slate-900">Log Paper</h2>
+          <h2 className="text-xl font-bold text-slate-900">{existingLog ? 'Edit Paper Log' : 'Log Paper'}</h2>
           <button 
             onClick={onClose}
             className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
@@ -166,7 +175,7 @@ export function LogForm({ store, defaultSubjectId, onClose }: LogFormProps) {
               type="submit"
               className="w-full flex items-center justify-center px-4 py-3 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
             >
-              Save Log
+              {existingLog ? 'Update Log' : 'Save Log'}
             </button>
           </div>
         </form>

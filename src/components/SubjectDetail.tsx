@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { ArrowLeft, Plus, Search, ExternalLink, Calendar, Clock, Target, TrendingUp, FileText, CheckCircle, Edit2, Check, AlertCircle, Trash2, Settings, X } from 'lucide-react';
+import { ArrowLeft, Plus, Search, ExternalLink, Calendar, Clock, Target, TrendingUp, FileText, CheckCircle, Edit2, Check, AlertCircle, Trash2, Settings, X, FileQuestion } from 'lucide-react';
 import { useStore } from '../store';
 import { format, parseISO } from 'date-fns';
 import { Season } from '../types';
@@ -28,6 +28,7 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
   const subjectLogs = logs.filter(l => l.subjectId === subjectId).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const [isAddingLog, setIsAddingLog] = useState(false);
+  const [editingLogId, setEditingLogId] = useState<string | null>(null);
   const [isEditingSubject, setIsEditingSubject] = useState(false);
   const [editSubjectData, setEditSubjectData] = useState({
     name: '',
@@ -133,7 +134,7 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
       const now = new Date();
       dateObj.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
 
-      await addLog({
+      const logData = {
         subjectId,
         date: dateObj.toISOString(),
         year: newLog.year,
@@ -144,8 +145,16 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
         maxScore: Number(newLog.maxScore),
         timeTaken: newLog.timeTaken ? Number(newLog.timeTaken) : undefined,
         notes: newLog.notes
-      });
+      };
+
+      if (editingLogId) {
+        await updateLog(editingLogId, logData);
+      } else {
+        await addLog(logData);
+      }
+      
       setIsAddingLog(false);
+      setEditingLogId(null);
       setNewLog({
         date: format(new Date(), 'yyyy-MM-dd'),
         year: new Date().getFullYear(),
@@ -158,6 +167,22 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
         notes: ''
       });
     }
+  };
+
+  const handleEditLog = (log: any) => {
+    setNewLog({
+      date: format(parseISO(log.date), 'yyyy-MM-dd'),
+      year: log.year,
+      season: log.season,
+      paper: log.paper.toString(),
+      variant: log.variant.toString(),
+      score: log.score.toString(),
+      maxScore: log.maxScore.toString(),
+      timeTaken: log.timeTaken ? log.timeTaken.toString() : '',
+      notes: log.notes || ''
+    });
+    setEditingLogId(log.id);
+    setIsAddingLog(true);
   };
 
   const getSeasonName = (s: string) => {
@@ -529,6 +554,13 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
                       {log.score} / {log.maxScore} marks
                     </p>
                     <button
+                      onClick={() => handleEditLog(log)}
+                      className="p-1 text-slate-400 hover:text-indigo-500 dark:text-slate-500 dark:hover:text-indigo-400 transition-colors rounded-full hover:bg-indigo-50 dark:hover:bg-indigo-500/10"
+                      title="Edit log"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button
                       onClick={() => {
                         if (window.confirm('Are you sure you want to delete this paper log?')) {
                           deleteLog(log.id);
@@ -550,7 +582,10 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
             );
           })}
           {subjectLogs.length === 0 && !isAddingLog && (
-            <p className="text-center text-slate-500 dark:text-slate-400 py-8 transition-colors">No papers logged yet. Start practicing!</p>
+            <div className="flex flex-col items-center justify-center py-12 text-slate-500 dark:text-slate-400 transition-colors">
+              <FileQuestion className="w-12 h-12 mb-4 opacity-20" />
+              <p className="text-sm text-center">No papers logged yet. Start practicing!</p>
+            </div>
           )}
         </div>
       </div>
@@ -566,8 +601,8 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
               className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-slate-200 dark:border-slate-800"
             >
               <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center sticky top-0 bg-white dark:bg-slate-900 z-10">
-                <h3 className="text-xl font-bold text-slate-900 dark:text-slate-50 font-display transition-colors">Log New Paper</h3>
-                <button onClick={() => setIsAddingLog(false)} className="text-slate-400 hover:text-slate-500 dark:hover:text-slate-300 transition-colors">
+                <h3 className="text-xl font-bold text-slate-900 dark:text-slate-50 font-display transition-colors">{editingLogId ? 'Edit Paper Log' : 'Log New Paper'}</h3>
+                <button onClick={() => { setIsAddingLog(false); setEditingLogId(null); }} className="text-slate-400 hover:text-slate-500 dark:hover:text-slate-300 transition-colors">
                   <X className="w-6 h-6" />
                 </button>
               </div>
@@ -626,7 +661,14 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wider transition-colors">Score</label>
+                    <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wider transition-colors">
+                      Score
+                      {newLog.score && newLog.maxScore && Number(newLog.maxScore) > 0 ? (
+                        <span className="ml-1 text-indigo-600 dark:text-indigo-400">
+                          ({Math.round((Number(newLog.score) / Number(newLog.maxScore)) * 100)}%)
+                        </span>
+                      ) : null}
+                    </label>
                     <input
                       type="number"
                       value={newLog.score}
@@ -669,11 +711,11 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
                   </div>
                 </div>
                 <div className="flex justify-end space-x-3">
-                  <button type="button" onClick={() => setIsAddingLog(false)} className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl font-medium transition-colors">
+                  <button type="button" onClick={() => { setIsAddingLog(false); setEditingLogId(null); }} className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl font-medium transition-colors">
                     Cancel
                   </button>
                   <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-medium transition-colors shadow-sm">
-                    Save Log
+                    {editingLogId ? 'Update Log' : 'Save Log'}
                   </button>
                 </div>
               </form>

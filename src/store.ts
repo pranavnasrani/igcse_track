@@ -3,6 +3,7 @@ import { collection, onSnapshot, doc, setDoc, deleteDoc, query, orderBy } from '
 import { db } from './firebase';
 import { Subject, PaperLog, DEFAULT_SUBJECTS } from './types';
 import { handleFirestoreError, OperationType } from './errorHandling';
+import { toast } from 'sonner';
 
 export function useStore(userId: string | undefined) {
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -56,8 +57,23 @@ export function useStore(userId: string | undefined) {
       // Remove undefined fields
       Object.keys(data).forEach(key => data[key as keyof typeof data] === undefined && delete data[key as keyof typeof data]);
       await setDoc(doc(db, `users/${userId}/logs`, id), data);
+      toast.success('Paper logged successfully!');
     } catch (e) {
+      toast.error('Failed to log paper');
       handleFirestoreError(e, OperationType.CREATE, `users/${userId}/logs`);
+    }
+  };
+
+  const updateLog = async (id: string, data: Partial<PaperLog>) => {
+    if (!userId) return;
+    try {
+      const cleanData = { ...data };
+      Object.keys(cleanData).forEach(key => cleanData[key as keyof typeof cleanData] === undefined && delete cleanData[key as keyof typeof cleanData]);
+      await setDoc(doc(db, `users/${userId}/logs`, id), cleanData, { merge: true });
+      toast.success('Log updated successfully!');
+    } catch (e) {
+      toast.error('Failed to update log');
+      handleFirestoreError(e, OperationType.UPDATE, `users/${userId}/logs/${id}`);
     }
   };
 
@@ -65,7 +81,9 @@ export function useStore(userId: string | undefined) {
     if (!userId) return;
     try {
       await deleteDoc(doc(db, `users/${userId}/logs`, id));
+      toast.success('Log deleted');
     } catch (e) {
+      toast.error('Failed to delete log');
       handleFirestoreError(e, OperationType.DELETE, `users/${userId}/logs/${id}`);
     }
   };
@@ -78,7 +96,9 @@ export function useStore(userId: string | undefined) {
       // Remove undefined fields
       Object.keys(data).forEach(key => data[key as keyof typeof data] === undefined && delete data[key as keyof typeof data]);
       await setDoc(doc(db, `users/${userId}/subjects`, id), data);
+      toast.success('Subject added successfully!');
     } catch (e) {
+      toast.error('Failed to add subject');
       handleFirestoreError(e, OperationType.CREATE, `users/${userId}/subjects`);
     }
   };
@@ -89,7 +109,9 @@ export function useStore(userId: string | undefined) {
       const cleanData = { ...data };
       Object.keys(cleanData).forEach(key => cleanData[key as keyof typeof cleanData] === undefined && delete cleanData[key as keyof typeof cleanData]);
       await setDoc(doc(db, `users/${userId}/subjects`, id), cleanData, { merge: true });
+      toast.success('Subject updated');
     } catch (e) {
+      toast.error('Failed to update subject');
       handleFirestoreError(e, OperationType.UPDATE, `users/${userId}/subjects/${id}`);
     }
   };
@@ -98,10 +120,12 @@ export function useStore(userId: string | undefined) {
     if (!userId) return;
     try {
       await deleteDoc(doc(db, `users/${userId}/subjects`, id));
+      toast.success('Subject deleted');
     } catch (e) {
+      toast.error('Failed to delete subject');
       handleFirestoreError(e, OperationType.DELETE, `users/${userId}/subjects/${id}`);
     }
   };
 
-  return { subjects, logs, loading, addLog, deleteLog, addSubject, updateSubject, deleteSubject };
+  return { subjects, logs, loading, addLog, updateLog, deleteLog, addSubject, updateSubject, deleteSubject };
 }

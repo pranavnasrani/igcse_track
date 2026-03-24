@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useStore } from '../store';
-import { BookOpen, TrendingUp, Award, Activity, Search } from 'lucide-react';
+import { BookOpen, TrendingUp, Award, Activity, Search, Flame, FileQuestion, Edit2 } from 'lucide-react';
 import {
   BarChart,
   Bar,
@@ -12,15 +12,19 @@ import {
   Cell
 } from 'recharts';
 import { motion } from 'motion/react';
+import { LogForm } from './LogForm';
+import { PaperLog } from '../types';
 
 interface DashboardProps {
   userId: string;
 }
 
 export function Dashboard({ userId }: DashboardProps) {
-  const { subjects, logs } = useStore(userId);
+  const store = useStore(userId);
+  const { subjects, logs } = store;
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [editingLog, setEditingLog] = useState<PaperLog | null>(null);
   const [parsedSearch, setParsedSearch] = useState<{
     season?: string;
     year?: number;
@@ -116,7 +120,12 @@ export function Dashboard({ userId }: DashboardProps) {
     
     const recentLogs = [...logs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
 
-    return { totalPapers, averageScore, recentLogs };
+    // Calculate streak (papers done in the last 7 days)
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const recentPapersCount = logs.filter(log => new Date(log.date) >= sevenDaysAgo).length;
+
+    return { totalPapers, averageScore, recentLogs, recentPapersCount };
   }, [logs]);
 
   const chartData = useMemo(() => {
@@ -146,7 +155,7 @@ export function Dashboard({ userId }: DashboardProps) {
         <p className="text-slate-500 dark:text-slate-400 mt-1 transition-colors">Here's an overview of your IGCSE preparation.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-center space-x-4 transition-colors">
           <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center transition-colors shadow-sm">
             <BookOpen className="w-7 h-7" />
@@ -174,6 +183,16 @@ export function Dashboard({ userId }: DashboardProps) {
           <div>
             <p className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider transition-colors">Active Subjects</p>
             <p className="text-3xl font-bold text-slate-900 dark:text-slate-50 font-display transition-colors">{subjects.length}</p>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-center space-x-4 transition-colors">
+          <div className="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 flex items-center justify-center transition-colors shadow-sm">
+            <Flame className="w-7 h-7" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider transition-colors">7-Day Streak</p>
+            <p className="text-3xl font-bold text-slate-900 dark:text-slate-50 font-display transition-colors">{stats.recentPapersCount}</p>
           </div>
         </div>
       </div>
@@ -223,7 +242,8 @@ export function Dashboard({ userId }: DashboardProps) {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex items-center justify-center text-slate-400 dark:text-slate-500 transition-colors">
+              <div className="h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 transition-colors">
+                <TrendingUp className="w-12 h-12 mb-4 opacity-20" />
                 <p>No data yet. Log some papers to see your performance.</p>
               </div>
             )}
@@ -258,30 +278,50 @@ export function Dashboard({ userId }: DashboardProps) {
                 const percentage = Math.round((log.score / log.maxScore) * 100);
                 
                 return (
-                  <div key={log.id} className="flex items-center p-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-100 dark:hover:border-slate-800">
-                    <div 
-                      className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-sm mr-4 flex-shrink-0 shadow-sm"
-                      style={{ backgroundColor: subject.color }}
+                  <div key={log.id} className="flex items-center justify-between p-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-100 dark:hover:border-slate-800 group">
+                    <div className="flex items-center overflow-hidden">
+                      <div 
+                        className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-sm mr-4 flex-shrink-0 shadow-sm"
+                        style={{ backgroundColor: subject.color }}
+                      >
+                        {percentage}%
+                      </div>
+                      <div className="overflow-hidden">
+                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate transition-colors">{subject.name}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate transition-colors">
+                          {log.year} {getSeasonName(log.season)} p{log.paper}v{log.variant} • {log.score}/{log.maxScore}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setEditingLog(log)}
+                      className="p-2 text-slate-400 hover:text-indigo-500 dark:text-slate-500 dark:hover:text-indigo-400 transition-colors rounded-full hover:bg-indigo-50 dark:hover:bg-indigo-500/10 opacity-0 group-hover:opacity-100 focus:opacity-100"
+                      title="Edit log"
                     >
-                      {percentage}%
-                    </div>
-                    <div className="overflow-hidden">
-                      <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate transition-colors">{subject.name}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate transition-colors">
-                        {log.year} {getSeasonName(log.season)} p{log.paper}v{log.variant} • {log.score}/{log.maxScore}
-                      </p>
-                    </div>
+                      <Edit2 className="w-4 h-4" />
+                    </button>
                   </div>
                 );
               })
             ) : (
-              <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-8 transition-colors">
-                {searchQuery.trim() ? 'No papers found matching your search.' : 'No recent activity.'}
-              </p>
+              <div className="flex flex-col items-center justify-center py-12 text-slate-500 dark:text-slate-400 transition-colors">
+                <FileQuestion className="w-12 h-12 mb-4 opacity-20" />
+                <p className="text-sm text-center">
+                  {searchQuery.trim() ? 'No papers found matching your search.' : 'No recent activity. Use "Quick Log" to add one!'}
+                </p>
+              </div>
             )}
           </div>
         </div>
       </div>
+
+      {editingLog && (
+        <LogForm
+          store={store}
+          existingLog={editingLog}
+          onClose={() => setEditingLog(null)}
+        />
+      )}
     </motion.div>
   );
 }

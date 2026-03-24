@@ -8,6 +8,7 @@ import { SubjectList } from './components/SubjectList';
 import { SubjectDetail } from './components/SubjectDetail';
 import { Login } from './components/Login';
 import { motion, AnimatePresence } from 'motion/react';
+import { Toaster } from 'sonner';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -46,7 +47,8 @@ export default function App() {
   }
 
   return (
-    <Layout currentView={currentView} navigateTo={navigateTo} user={user}>
+    <Layout currentView={currentView} navigateTo={navigateTo} user={user} store={store}>
+      <Toaster position="bottom-right" richColors />
       <AnimatePresence mode="wait">
         <motion.div
           key={currentView === 'subject' ? `${currentView}-${selectedSubjectId}` : currentView}

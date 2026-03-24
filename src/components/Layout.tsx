@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, BookOpen, LogOut, Sun, Moon } from 'lucide-react';
+import { LayoutDashboard, BookOpen, LogOut, Sun, Moon, Plus } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { auth } from '../firebase';
 import { User } from 'firebase/auth';
+import { LogForm } from './LogForm';
+import { useStore } from '../store';
 
 export function cn(...inputs: (string | undefined | null | false)[]) {
   return twMerge(clsx(inputs));
@@ -14,9 +16,11 @@ interface LayoutProps {
   currentView: 'dashboard' | 'subjects' | 'subject';
   navigateTo: (view: 'dashboard' | 'subjects') => void;
   user: User;
+  store: ReturnType<typeof useStore>;
 }
 
-export function Layout({ children, currentView, navigateTo, user }: LayoutProps) {
+export function Layout({ children, currentView, navigateTo, user, store }: LayoutProps) {
+  const [isLogFormOpen, setIsLogFormOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('theme') === 'dark' || 
@@ -43,6 +47,13 @@ export function Layout({ children, currentView, navigateTo, user }: LayoutProps)
       <aside className="hidden md:flex flex-col w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-colors duration-200">
         <div className="p-6">
           <h1 className="text-2xl font-bold tracking-tight text-indigo-600 dark:text-indigo-400 font-display">IGCSE Tracker</h1>
+          <button
+            onClick={() => setIsLogFormOpen(true)}
+            className="mt-6 w-full flex items-center justify-center px-4 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Quick Log
+          </button>
         </div>
         <nav className="flex-1 px-4 space-y-2">
           <button
@@ -104,6 +115,9 @@ export function Layout({ children, currentView, navigateTo, user }: LayoutProps)
         <header className="md:hidden bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between transition-colors duration-200">
           <h1 className="text-xl font-bold text-indigo-600 dark:text-indigo-400 font-display">IGCSE Tracker</h1>
           <div className="flex items-center space-x-2">
+            <button onClick={() => setIsLogFormOpen(true)} className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-xl transition-colors">
+              <Plus className="w-5 h-5" />
+            </button>
             <button onClick={toggleDarkMode} className="p-2 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400">
               {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
@@ -143,6 +157,7 @@ export function Layout({ children, currentView, navigateTo, user }: LayoutProps)
           </button>
         </nav>
       </main>
+      {isLogFormOpen && <LogForm store={store} onClose={() => setIsLogFormOpen(false)} />}
     </div>
   );
 }
