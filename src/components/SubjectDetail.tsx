@@ -203,9 +203,26 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
   };
 
   const handleRecommendClick = (year: number, season: Season) => {
+    // Update the search fields so it's ready
+    setSearchYear(year.toString());
+    setSearchSeason(season);
+    
+    // Pre-fill the new log form for when they return and click '+'
     setNewLog(prev => ({ ...prev, year, season }));
-    setEditingLogId(null);
-    setIsAddingLog(true);
+    
+    // Open the question paper
+    if (!subject?.code) {
+      const variantText = searchVariant === 'none' ? '' : ` variant ${searchVariant}`;
+      const query = `IGCSE ${subject.name} past paper ${year} ${getSeasonName(season)} paper ${searchPaper}${variantText}`;
+      window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank');
+      return;
+    }
+    
+    const year2Digit = year.toString().slice(-2);
+    const paperStr = searchVariant === 'none' ? searchPaper : `${searchPaper}${searchVariant}`;
+    const url = `https://pastpapers.papacambridge.com/directories/CAIE/CAIE-pastpapers/upload/${subject.code}_${season}${year2Digit}_qp_${paperStr}.pdf`;
+    
+    window.open(url, '_blank');
   };
 
   const handleEditLog = (log: any) => {
