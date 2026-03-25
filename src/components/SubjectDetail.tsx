@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { ArrowLeft, Plus, Search, ExternalLink, Calendar, Clock, Target, TrendingUp, FileText, CheckCircle, Edit2, Check, AlertCircle, Trash2, Settings, X, FileQuestion } from 'lucide-react';
+import { ArrowLeft, Plus, Search, ExternalLink, Calendar, Clock, Target, TrendingUp, FileText, CheckCircle, Edit2, Check, AlertCircle, Trash2, Settings, X, FileQuestion, LayoutGrid, List, Flame } from 'lucide-react';
 import { useStore } from '../store';
 import { format, parseISO } from 'date-fns';
 import { Season } from '../types';
@@ -30,6 +30,7 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
   const [isAddingLog, setIsAddingLog] = useState(false);
   const [editingLogId, setEditingLogId] = useState<string | null>(null);
   const [isEditingSubject, setIsEditingSubject] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
   const [editSubjectData, setEditSubjectData] = useState({
     name: '',
     code: '',
@@ -124,6 +125,38 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
     return Math.round(totalPercentage / subjectLogs.length);
   }, [subjectLogs]);
 
+  const gridData = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const maxAvailableYear = currentYear - 1; // Exclude current year as papers aren't out yet
+    const logYears = subjectLogs.map(l => l.year);
+    const earliestLogYear = logYears.length > 0 ? Math.min(...logYears) : maxAvailableYear;
+    const maxYear = Math.max(maxAvailableYear, ...logYears);
+    const minYear = earliestLogYear - 2;
+    const displayYears = Array.from({ length: maxYear - minYear + 1 }, (_, i) => maxYear - i);
+    const seasons: Season[] = ['m', 's', 'w'];
+    const seasonLabels = { m: 'March', s: 'June', w: 'November' };
+    
+    const isAvailable = (y: number, s: Season) => {
+      return y <= maxAvailableYear;
+    };
+
+    let recommended: { year: number, season: Season } | null = null;
+    for (let y = maxYear; y >= minYear; y--) {
+      for (const s of ['w', 's', 'm'] as Season[]) {
+        if (isAvailable(y, s)) {
+          const hasPaper = subjectLogs.some(l => l.year === y && l.season === s);
+          if (!hasPaper) {
+            recommended = { year: y, season: s };
+            break;
+          }
+        }
+      }
+      if (recommended) break;
+    }
+
+    return { displayYears, seasons, seasonLabels, recommended };
+  }, [subjectLogs]);
+
   if (!subject) return null;
 
   const handleAddLog = async (e: React.FormEvent) => {
@@ -167,6 +200,12 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
         notes: ''
       });
     }
+  };
+
+  const handleRecommendClick = (year: number, season: Season) => {
+    setNewLog(prev => ({ ...prev, year, season }));
+    setEditingLogId(null);
+    setIsAddingLog(true);
   };
 
   const handleEditLog = (log: any) => {
@@ -523,71 +562,151 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
 
       {/* Paper Logs */}
       <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
           <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-50 font-display transition-colors">Paper History</h3>
+          <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700/50">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-200 ${viewMode === 'grid' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400 font-medium' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+              title="Grid View"
+            >
+              <LayoutGrid className="w-4 h-4" />
+              <span className="text-sm">Grid</span>
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-200 ${viewMode === 'list' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400 font-medium' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+              title="List View"
+            >
+              <List className="w-4 h-4" />
+              <span className="text-sm">List</span>
+            </button>
+          </div>
         </div>
 
-
-
-        <div className="space-y-4">
-          {subjectLogs.map((log) => {
-            const percentage = Math.round((log.score / log.maxScore) * 100);
-            return (
-              <div key={log.id} className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-2xl border border-slate-100 dark:border-slate-800/50 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-                <div className="flex items-start md:items-center space-x-4 mb-3 md:mb-0">
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold font-display shadow-sm" style={{ backgroundColor: subject.color }}>
-                    {percentage}%
-                  </div>
-                  <div>
-                    <p className="font-semibold text-slate-900 dark:text-slate-100 transition-colors">
-                      {log.year} {getSeasonName(log.season)} - Paper {log.paper}{log.variant}
-                    </p>
-                    <div className="flex items-center text-sm text-slate-500 dark:text-slate-400 mt-1 space-x-3 transition-colors">
-                      <span className="flex items-center"><Calendar className="w-3 h-3 mr-1" /> {format(parseISO(log.date), 'MMM dd, yyyy')}</span>
-                      {log.timeTaken && <span className="flex items-center"><Clock className="w-3 h-3 mr-1" /> {log.timeTaken} min</span>}
+        {viewMode === 'list' ? (
+          <div className="space-y-4">
+            {subjectLogs.map((log) => {
+              const percentage = Math.round((log.score / log.maxScore) * 100);
+              return (
+                <div key={log.id} className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-2xl border border-slate-100 dark:border-slate-800/50 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                  <div className="flex items-start md:items-center space-x-4 mb-3 md:mb-0">
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold font-display shadow-sm" style={{ backgroundColor: subject.color }}>
+                      {percentage}%
+                    </div>
+                    <div>
+                      <p className="font-semibold text-slate-900 dark:text-slate-100 transition-colors">
+                        {log.year} {getSeasonName(log.season)} - Paper {log.paper}{log.variant}
+                      </p>
+                      <div className="flex items-center text-sm text-slate-500 dark:text-slate-400 mt-1 space-x-3 transition-colors">
+                        <span className="flex items-center"><Calendar className="w-3 h-3 mr-1" /> {format(parseISO(log.date), 'MMM dd, yyyy')}</span>
+                        {log.timeTaken && <span className="flex items-center"><Clock className="w-3 h-3 mr-1" /> {log.timeTaken} min</span>}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="flex flex-col md:items-end">
-                  <div className="flex items-center space-x-3 mb-1">
-                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300 transition-colors">
-                      {log.score} / {log.maxScore} marks
-                    </p>
-                    <button
-                      onClick={() => handleEditLog(log)}
-                      className="p-1 text-slate-400 hover:text-indigo-500 dark:text-slate-500 dark:hover:text-indigo-400 transition-colors rounded-full hover:bg-indigo-50 dark:hover:bg-indigo-500/10"
-                      title="Edit log"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (window.confirm('Are you sure you want to delete this paper log?')) {
-                          deleteLog(log.id);
-                        }
-                      }}
-                      className="p-1 text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 transition-colors rounded-full hover:bg-red-50 dark:hover:bg-red-500/10"
-                      title="Delete log"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                  <div className="flex flex-col md:items-end">
+                    <div className="flex items-center space-x-3 mb-1">
+                      <p className="text-sm font-medium text-slate-700 dark:text-slate-300 transition-colors">
+                        {log.score} / {log.maxScore} marks
+                      </p>
+                      <button
+                        onClick={() => handleEditLog(log)}
+                        className="p-1 text-slate-400 hover:text-indigo-500 dark:text-slate-500 dark:hover:text-indigo-400 transition-colors rounded-full hover:bg-indigo-50 dark:hover:bg-indigo-500/10"
+                        title="Edit log"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (window.confirm('Are you sure you want to delete this paper log?')) {
+                            deleteLog(log.id);
+                          }
+                        }}
+                        className="p-1 text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 transition-colors rounded-full hover:bg-red-50 dark:hover:bg-red-500/10"
+                        title="Delete log"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                    {log.notes && (
+                      <p className="text-sm text-slate-500 dark:text-slate-400 italic max-w-xs truncate transition-colors">
+                        "{log.notes}"
+                      </p>
+                    )}
                   </div>
-                  {log.notes && (
-                    <p className="text-sm text-slate-500 dark:text-slate-400 italic max-w-xs truncate transition-colors">
-                      "{log.notes}"
-                    </p>
-                  )}
                 </div>
+              );
+            })}
+            {subjectLogs.length === 0 && !isAddingLog && (
+              <div className="flex flex-col items-center justify-center py-12 text-slate-500 dark:text-slate-400 transition-colors">
+                <FileQuestion className="w-12 h-12 mb-4 opacity-20" />
+                <p className="text-sm text-center">No papers logged yet. Start practicing!</p>
               </div>
-            );
-          })}
-          {subjectLogs.length === 0 && !isAddingLog && (
-            <div className="flex flex-col items-center justify-center py-12 text-slate-500 dark:text-slate-400 transition-colors">
-              <FileQuestion className="w-12 h-12 mb-4 opacity-20" />
-              <p className="text-sm text-center">No papers logged yet. Start practicing!</p>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[600px]">
+              <thead>
+                <tr>
+                  <th className="p-3 border-b border-slate-200 dark:border-slate-800 font-semibold text-sm text-slate-900 dark:text-slate-100">Year</th>
+                  {gridData.seasons.map(s => (
+                    <th key={s} className="p-3 border-b border-slate-200 dark:border-slate-800 font-semibold text-sm text-slate-900 dark:text-slate-100">{gridData.seasonLabels[s]}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {gridData.displayYears.map(year => (
+                  <tr key={year} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
+                    <td className="p-3 border-b border-slate-100 dark:border-slate-800/50 font-medium text-sm text-slate-700 dark:text-slate-300 align-top w-24">
+                      {year}
+                    </td>
+                    {gridData.seasons.map(season => {
+                      const cellLogs = subjectLogs.filter(l => l.year === year && l.season === season);
+                      const isRecommended = gridData.recommended?.year === year && gridData.recommended?.season === season;
+                      
+                      return (
+                        <td key={`${year}-${season}`} className={`p-3 border-b border-slate-100 dark:border-slate-800/50 align-top ${isRecommended ? 'bg-indigo-50/30 dark:bg-indigo-500/5' : ''}`}>
+                          <div className="flex flex-col items-start gap-2">
+                            {isRecommended && cellLogs.length === 0 && (
+                              <button 
+                                onClick={() => handleRecommendClick(year, season)}
+                                className="text-xs font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-500/20 px-2 py-1 rounded-md flex items-center hover:bg-indigo-200 dark:hover:bg-indigo-500/30 transition-colors"
+                              >
+                                <Flame className="w-3 h-3 mr-1" /> Recommended Next
+                              </button>
+                            )}
+                            <div className="flex flex-wrap gap-2">
+                              {cellLogs.length > 0 ? (
+                                cellLogs.map(log => {
+                                  const percentage = Math.round((log.score / log.maxScore) * 100);
+                                  return (
+                                    <button
+                                      key={log.id}
+                                      onClick={() => handleEditLog(log)}
+                                      className="text-xs px-2 py-1.5 rounded-lg border flex items-center gap-1.5 hover:opacity-80 transition-opacity bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
+                                      title={`Score: ${log.score}/${log.maxScore} (${percentage}%)`}
+                                    >
+                                      <span className="font-semibold">P{log.paper}V{log.variant}</span>
+                                      <span className="opacity-50">|</span>
+                                      <span className={subject.targetScore && percentage >= subject.targetScore ? 'text-emerald-600 dark:text-emerald-400 font-medium' : ''}>{percentage}%</span>
+                                    </button>
+                                  );
+                                })
+                              ) : (
+                                !isRecommended && <span className="text-xs text-slate-400 dark:text-slate-600 italic opacity-0 group-hover:opacity-100 transition-opacity">No papers</span>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Log Paper Modal */}
