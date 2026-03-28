@@ -133,6 +133,7 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
     const maxYear = Math.max(maxAvailableYear, ...logYears);
     const minYear = earliestLogYear - 2;
     const displayYears = Array.from({ length: maxYear - minYear + 1 }, (_, i) => maxYear - i);
+    
     const seasons: Season[] = ['m', 's', 'w'];
     const seasonLabels = { m: 'March', s: 'June', w: 'November' };
     
@@ -141,8 +142,10 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
     };
 
     let recommended: { year: number, season: Season } | null = null;
+    const seasonsToCheck = ['w', 's', 'm'] as Season[];
+    
     for (let y = maxYear; y >= minYear; y--) {
-      for (const s of ['w', 's', 'm'] as Season[]) {
+      for (const s of seasonsToCheck) {
         if (isAvailable(y, s)) {
           const hasPaper = subjectLogs.some(l => l.year === y && l.season === s);
           if (!hasPaper) {
@@ -203,23 +206,30 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
   };
 
   const handleRecommendClick = (year: number, season: Season) => {
+    // March series only has variant 2 for all subjects
+    let targetVariant = searchVariant;
+    if (season === 'm' && targetVariant !== 'none') {
+      targetVariant = '2';
+      setSearchVariant('2');
+    }
+
     // Update the search fields so it's ready
     setSearchYear(year.toString());
     setSearchSeason(season);
     
     // Pre-fill the new log form for when they return and click '+'
-    setNewLog(prev => ({ ...prev, year, season }));
+    setNewLog(prev => ({ ...prev, year, season, variant: targetVariant }));
     
     // Open the question paper
     if (!subject?.code) {
-      const variantText = searchVariant === 'none' ? '' : ` variant ${searchVariant}`;
+      const variantText = targetVariant === 'none' ? '' : ` variant ${targetVariant}`;
       const query = `IGCSE ${subject.name} past paper ${year} ${getSeasonName(season)} paper ${searchPaper}${variantText}`;
       window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank');
       return;
     }
     
     const year2Digit = year.toString().slice(-2);
-    const paperStr = searchVariant === 'none' ? searchPaper : `${searchPaper}${searchVariant}`;
+    const paperStr = targetVariant === 'none' ? searchPaper : `${searchPaper}${targetVariant}`;
     const url = `https://pastpapers.papacambridge.com/directories/CAIE/CAIE-pastpapers/upload/${subject.code}_${season}${year2Digit}_qp_${paperStr}.pdf`;
     
     window.open(url, '_blank');
