@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { ArrowLeft, Plus, Search, ExternalLink, Calendar, Clock, Target, TrendingUp, FileText, CheckCircle, Edit2, Check, AlertCircle, Trash2, Settings, X, FileQuestion, LayoutGrid, List, Flame } from 'lucide-react';
+import { ArrowLeft, Plus, Search, ExternalLink, Calendar, Clock, Target, TrendingUp, FileText, CheckCircle, Edit2, Check, AlertCircle, Trash2, Settings, X, FileQuestion, LayoutGrid, List, Flame, Sparkles } from 'lucide-react';
 import { useStore } from '../store';
 import { format, parseISO } from 'date-fns';
 import { Season } from '../types';
@@ -23,7 +23,7 @@ interface SubjectDetailProps {
 }
 
 export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps) {
-  const { subjects, logs, addLog, deleteLog, updateSubject, deleteSubject } = useStore(userId);
+  const { subjects, logs, addLog, deleteLog, updateLog, updateSubject, deleteSubject } = useStore(userId);
   const subject = subjects.find(s => s.id === subjectId);
   const subjectLogs = logs.filter(l => l.subjectId === subjectId).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -66,6 +66,46 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
   const [searchPaper, setSearchPaper] = useState('1');
   const [searchVariant, setSearchVariant] = useState('1');
   const [searchQuery, setSearchQuery] = useState('');
+  const [smartLogInput, setSmartLogInput] = useState('');
+
+  const handleSmartLogInput = (query: string) => {
+    setSmartLogInput(query);
+    if (!query.trim()) return;
+
+    const lowerQuery = query.toLowerCase();
+    let newLogUpdates: any = {};
+
+    // 1. Extract standard shorthand like s23, m22, w21
+    const shorthandMatch = lowerQuery.match(/\b([msw])(\d{2})\b/);
+    if (shorthandMatch) {
+      newLogUpdates.season = shorthandMatch[1];
+      newLogUpdates.year = parseInt(`20${shorthandMatch[2]}`);
+    } else {
+      if (/(march|\bm\b)/.test(lowerQuery)) newLogUpdates.season = 'm';
+      else if (/(june|may|\bs\b)/.test(lowerQuery)) newLogUpdates.season = 's';
+      else if (/(nov|oct|november|\bw\b)/.test(lowerQuery)) newLogUpdates.season = 'w';
+
+      const yearMatch = lowerQuery.match(/\b(20\d{2})\b/);
+      if (yearMatch) newLogUpdates.year = parseInt(yearMatch[1]);
+    }
+
+    // 2. Extract paper and variant
+    const pvMatch = lowerQuery.match(/\b(?:p|qp|paper\s*)?([1-6])([1-3])\b/);
+    if (pvMatch) {
+      newLogUpdates.paper = pvMatch[1];
+      newLogUpdates.variant = pvMatch[2];
+    } else {
+      const pMatch = lowerQuery.match(/\b(?:paper|p)\s*([1-6])\b/);
+      if (pMatch) newLogUpdates.paper = pMatch[1];
+
+      const vMatch = lowerQuery.match(/\b(?:variant|v)\s*([1-3])\b/);
+      if (vMatch) newLogUpdates.variant = vMatch[1];
+    }
+
+    if (Object.keys(newLogUpdates).length > 0) {
+      setNewLog(prev => ({ ...prev, ...newLogUpdates }));
+    }
+  };
 
   const handleSmartSearch = (query: string) => {
     setSearchQuery(query);
@@ -748,11 +788,26 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
             >
               <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center sticky top-0 bg-white dark:bg-slate-900 z-10">
                 <h3 className="text-xl font-bold text-slate-900 dark:text-slate-50 font-display transition-colors">{editingLogId ? 'Edit Paper Log' : 'Log New Paper'}</h3>
-                <button onClick={() => { setIsAddingLog(false); setEditingLogId(null); }} className="text-slate-400 hover:text-slate-500 dark:hover:text-slate-300 transition-colors">
+                <button onClick={() => { setIsAddingLog(false); setEditingLogId(null); setSmartLogInput(''); }} className="text-slate-400 hover:text-slate-500 dark:hover:text-slate-300 transition-colors">
                   <X className="w-6 h-6" />
                 </button>
               </div>
               <form onSubmit={handleAddLog} className="p-6 transition-colors">
+                {!editingLogId && (
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 flex items-center transition-colors">
+                      <Sparkles className="w-4 h-4 mr-1.5 text-indigo-500" />
+                      Smart Autocomplete
+                    </label>
+                    <input 
+                      type="text" 
+                      value={smartLogInput} 
+                      onChange={e => handleSmartLogInput(e.target.value)}
+                      placeholder="e.g. s23 p42"
+                      className="w-full px-4 py-2.5 bg-indigo-50/50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder:text-indigo-300 dark:placeholder:text-indigo-700 text-indigo-900 dark:text-indigo-100 transition-colors"
+                    />
+                  </div>
+                )}
                 <div className="grid grid-cols-2 md:grid-cols-7 gap-4 mb-4">
                   <div className="col-span-2 md:col-span-1">
                     <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wider transition-colors">Date</label>
@@ -857,7 +912,24 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
                   </div>
                 </div>
                 <div className="flex justify-end space-x-3">
-                  <button type="button" onClick={() => { setIsAddingLog(false); setEditingLogId(null); }} className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl font-medium transition-colors">
+                  {editingLogId && (
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm('Are you sure you want to delete this paper log?')) {
+                          deleteLog(editingLogId);
+                          setIsAddingLog(false);
+                          setEditingLogId(null);
+                        }
+                      }}
+                      className="px-4 py-2 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-red-500/20 font-medium transition-colors flex items-center"
+                      title="Delete Log"
+                    >
+                      <Trash2 className="w-4 h-4 mr-1.5" />
+                      Delete
+                    </button>
+                  )}
+                  <button type="button" onClick={() => { setIsAddingLog(false); setEditingLogId(null); setSmartLogInput(''); }} className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl font-medium transition-colors">
                     Cancel
                   </button>
                   <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-medium transition-colors shadow-sm">
