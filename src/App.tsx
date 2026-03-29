@@ -9,6 +9,7 @@ import { SubjectDetail } from './components/SubjectDetail';
 import { Login } from './components/Login';
 import { motion, AnimatePresence } from 'motion/react';
 import { Toaster } from 'sonner';
+import { Analytics } from '@vercel/analytics/react';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -47,28 +48,31 @@ export default function App() {
   }
 
   return (
-    <Layout currentView={currentView} navigateTo={navigateTo} user={user} store={store}>
-      <Toaster position="bottom-right" richColors />
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={currentView === 'subject' ? `${currentView}-${selectedSubjectId}` : currentView}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          transition={{ duration: 0.2 }}
-          className="h-full"
-        >
-          {currentView === 'dashboard' && <Dashboard userId={user.uid} />}
-          {currentView === 'subjects' && <SubjectList userId={user.uid} onSelectSubject={(id) => navigateTo('subject', id)} />}
-          {currentView === 'subject' && selectedSubjectId && (
-            <SubjectDetail 
-              userId={user.uid} 
-              subjectId={selectedSubjectId} 
-              onBack={() => navigateTo('subjects')} 
-            />
-          )}
-        </motion.div>
-      </AnimatePresence>
-    </Layout>
+    <>
+      <Layout currentView={currentView} navigateTo={navigateTo} user={user} store={store}>
+        <Toaster position="bottom-right" richColors />
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentView === 'subject' ? `${currentView}-${selectedSubjectId}` : currentView}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+            className="h-full"
+          >
+            {currentView === 'dashboard' && <Dashboard userId={user.uid} />}
+            {currentView === 'subjects' && <SubjectList userId={user.uid} onSelectSubject={(id) => navigateTo('subject', id)} />}
+            {currentView === 'subject' && selectedSubjectId && (
+              <SubjectDetail 
+                userId={user.uid} 
+                subjectId={selectedSubjectId} 
+                onBack={() => navigateTo('subjects')} 
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
+      </Layout>
+      <Analytics />
+    </>
   );
 }
