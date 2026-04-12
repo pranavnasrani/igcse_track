@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useStore } from '../store';
-import { BookOpen, TrendingUp, Award, Activity, Search, Flame, FileQuestion, Edit2 } from 'lucide-react';
+import { BookOpen, TrendingUp, Award, Activity, Search, Flame, FileQuestion, Edit2, Sparkles, Target } from 'lucide-react';
 import {
   BarChart,
   Bar,
@@ -143,6 +143,89 @@ export function Dashboard({ userId }: DashboardProps) {
     }).filter(data => data.papers > 0).slice(0, 6); // Top 6 active subjects
   }, [subjects, logs]);
 
+  const momentum = useMemo(() => {
+    const today = new Date();
+    const days = Array.from({ length: 14 }, (_, index) => {
+      const date = new Date(today);
+      date.setHours(0, 0, 0, 0);
+      date.setDate(today.getDate() - (13 - index));
+      const nextDate = new Date(date);
+      nextDate.setDate(date.getDate() + 1);
+
+      const count = logs.filter(log => {
+        const logDate = new Date(log.date);
+        return logDate >= date && logDate < nextDate;
+      }).length;
+
+      const level = count === 0 ? 0 : count === 1 ? 1 : count === 2 ? 2 : 3;
+      return { date, count, level };
+    });
+
+    const activeDays = days.filter(day => day.count > 0).length;
+    const score = Math.round((activeDays / days.length) * 100);
+
+    return { days, activeDays, score };
+  }, [logs]);
+
+  const focusInsight = useMemo(() => {
+    if (subjects.length === 0) return null;
+
+    const bySubject = subjects.map(subject => {
+      const subjectLogs = logs.filter(log => log.subjectId === subject.id);
+      const average = subjectLogs.length > 0
+        ? Math.round(subjectLogs.reduce((acc, log) => acc + (log.score / log.maxScore) * 100, 0) / subjectLogs.length)
+        : 0;
+      const lastPracticedAt = subjectLogs.length > 0
+        ? subjectLogs.reduce((latest, log) => {
+            const logDate = new Date(log.date);
+            return logDate > latest ? logDate : latest;
+          }, new Date(subjectLogs[0].date))
+        : null;
+
+      return {
+        subject,
+        average,
+        logsCount: subjectLogs.length,
+        lastPracticedAt,
+        targetGap: subject.targetScore ? subject.targetScore - average : 0
+      };
+    });
+
+    const belowTarget = bySubject
+      .filter(item => item.logsCount > 0 && item.targetGap > 0)
+      .sort((a, b) => b.targetGap - a.targetGap)[0];
+
+    if (belowTarget) {
+      return {
+        title: `Focus on ${belowTarget.subject.name}`,
+        subtitle: `You're ${Math.round(belowTarget.targetGap)}% below your target. One more paper here could move your average fast.`,
+        color: belowTarget.subject.color
+      };
+    }
+
+    const practicedSubjects = bySubject
+      .filter(item => item.logsCount > 0 && item.lastPracticedAt)
+      .sort((a, b) => (a.lastPracticedAt!.getTime() - b.lastPracticedAt!.getTime()));
+
+    if (practicedSubjects.length > 0) {
+      const stale = practicedSubjects[0];
+      const daysSince = Math.max(0, Math.floor((Date.now() - stale.lastPracticedAt!.getTime()) / (1000 * 60 * 60 * 24)));
+      return {
+        title: `Revise ${stale.subject.name} next`,
+        subtitle: daysSince === 0
+          ? 'Great consistency today. Keep momentum by attempting one fresh variant.'
+          : `${daysSince} day${daysSince === 1 ? '' : 's'} since your last paper in this subject.`,
+        color: stale.subject.color
+      };
+    }
+
+    return {
+      title: `Start with ${subjects[0].name}`,
+      subtitle: 'Log your first paper to unlock personalized performance insights.',
+      color: subjects[0].color
+    };
+  }, [subjects, logs]);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -193,6 +276,56 @@ export function Dashboard({ userId }: DashboardProps) {
           <div>
             <p className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider transition-colors">7-Day Streak</p>
             <p className="text-3xl font-bold text-slate-900 dark:text-slate-50 font-display transition-colors">{stats.recentPapersCount}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-50 mb-3 font-display flex items-center transition-colors">
+            <Sparkles className="w-5 h-5 mr-2 text-indigo-500 dark:text-indigo-400" />
+            Focus Insight
+          </h3>
+          {focusInsight ? (
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 p-4 bg-slate-50 dark:bg-slate-950/60 transition-colors">
+              <div className="flex items-center mb-2">
+                <span
+                  className="w-2.5 h-2.5 rounded-full mr-2"
+                  style={{ backgroundColor: focusInsight.color }}
+                />
+                <p className="text-base font-semibold text-slate-900 dark:text-slate-100 transition-colors">{focusInsight.title}</p>
+              </div>
+              <p className="text-sm text-slate-600 dark:text-slate-400 transition-colors">{focusInsight.subtitle}</p>
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500 dark:text-slate-400 transition-colors">Add a subject to start getting tailored recommendations.</p>
+          )}
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-50 mb-3 font-display flex items-center transition-colors">
+            <Target className="w-5 h-5 mr-2 text-emerald-500 dark:text-emerald-400" />
+            14-Day Momentum
+          </h3>
+          <p className="text-3xl font-bold text-slate-900 dark:text-slate-50 font-display transition-colors">{momentum.score}%</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 transition-colors">{momentum.activeDays} active days in the last 2 weeks</p>
+          <div className="grid grid-cols-7 gap-1.5 mt-4">
+            {momentum.days.map((day) => (
+              <div
+                key={day.date.toISOString()}
+                className={
+                  `h-5 rounded-md ${day.level === 0
+                    ? 'bg-slate-200 dark:bg-slate-800'
+                    : day.level === 1
+                      ? 'bg-indigo-200 dark:bg-indigo-900'
+                      : day.level === 2
+                        ? 'bg-indigo-400 dark:bg-indigo-600'
+                        : 'bg-indigo-600 dark:bg-indigo-400'
+                  }`
+                }
+                title={`${day.date.toLocaleDateString()}: ${day.count} paper${day.count === 1 ? '' : 's'}`}
+              />
+            ))}
           </div>
         </div>
       </div>
