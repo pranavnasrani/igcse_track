@@ -257,7 +257,6 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
 
   const openQuestionPaper = (year: number, season: Season, variant: number) => {
     const targetVariant = String(variant);
-    const variantText = ` variant ${targetVariant}`;
 
     setSearchYear(year.toString());
     setSearchSeason(season);
@@ -266,7 +265,7 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
     setNewLog(prev => ({ ...prev, year, season, variant: targetVariant }));
 
     if (!subject?.code) {
-      const query = `IGCSE ${subject.name} past paper ${year} ${getSeasonName(season)} paper ${searchPaper}${variantText}`;
+      const query = `IGCSE ${subject.name} past paper ${year} ${getSeasonName(season)} paper ${searchPaper} variant ${targetVariant}`;
       window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank');
       return;
     }
@@ -770,6 +769,7 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
                         const extraLogs = cellLogs.length - 1;
                         const percentage = existingLog ? Math.round((existingLog.score / existingLog.maxScore) * 100) : 0;
                         const isRecommended = gridData.recommended?.year === year && gridData.recommended?.season === season && gridData.recommended?.variant === variant;
+                        const openPaperLabel = `Open Paper ${searchPaper} Variant ${variant}`;
 
                         return (
                           <td
@@ -792,7 +792,7 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
                                 title={
                                   existingLog
                                     ? `Open entry: ${existingLog.score}/${existingLog.maxScore} (${percentage}%)`
-                                    : `Open Paper ${searchPaper} Variant ${variant}`
+                                    : openPaperLabel
                                 }
                               >
                                 {existingLog ? (
@@ -818,7 +818,7 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
                                 ) : (
                                   <div className="flex h-full flex-col justify-center">
                                     <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                                      Open Paper {searchPaper} Variant {variant}
+                                      {openPaperLabel}
                                     </span>
                                     {isRecommended && (
                                       <span className="text-[11px] font-medium text-indigo-600 dark:text-indigo-400 mt-1 inline-flex items-center">
