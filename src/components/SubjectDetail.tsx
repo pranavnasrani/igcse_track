@@ -733,7 +733,10 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[980px]">
+            <table
+              className="w-full text-left border-collapse"
+              style={{ minWidth: `${120 + gridData.seasons.length * gridData.variants.length * 95}px` }}
+            >
               <thead>
                 <tr>
                   <th className="p-3 border-b border-slate-200 dark:border-slate-800 font-semibold text-sm text-slate-900 dark:text-slate-100 align-bottom" rowSpan={2}>Year</th>
@@ -853,7 +856,7 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
             >
               <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                 <h4 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                  Notes • {fullNotesLog.year} {getSeasonName(fullNotesLog.season)} P{fullNotesLog.paper}{fullNotesLog.variant}
+                  Notes • {fullNotesLog.year} {getSeasonName(fullNotesLog.season)} P{fullNotesLog.paper}V{fullNotesLog.variant}
                 </h4>
                 <button
                   type="button"
