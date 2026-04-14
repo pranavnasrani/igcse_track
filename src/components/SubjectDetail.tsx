@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { ArrowLeft, Plus, Search, ExternalLink, Calendar, Clock, Target, TrendingUp, FileText, CheckCircle, Edit2, Check, AlertCircle, Trash2, Settings, X, FileQuestion, LayoutGrid, List, Flame, Sparkles } from 'lucide-react';
 import { useStore } from '../store';
 import { format, parseISO } from 'date-fns';
-import { Season } from '../types';
+import { PaperLog, Season } from '../types';
 import { IGCSE_SUBJECTS } from '../constants';
 import {
   LineChart,
@@ -67,6 +67,7 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
   const [searchVariant, setSearchVariant] = useState('1');
   const [searchQuery, setSearchQuery] = useState('');
   const [smartLogInput, setSmartLogInput] = useState('');
+  const [fullNotesLog, setFullNotesLog] = useState<PaperLog | null>(null);
 
   const handleSmartLogInput = (query: string) => {
     setSmartLogInput(query);
@@ -175,30 +176,39 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
     const displayYears = Array.from({ length: maxYear - minYear + 1 }, (_, i) => maxYear - i);
     
     const seasons: Season[] = ['m', 's', 'w'];
+    const variants = [1, 2, 3];
     const seasonLabels = { m: 'March', s: 'June', w: 'November' };
     
-    const isAvailable = (y: number, s: Season) => {
-      return y <= maxAvailableYear;
+    const isAvailable = (y: number, s: Season, v: number) => {
+      if (y > maxAvailableYear) return false;
+      // March series only has variant 2 for all subjects
+      if (s === 'm' && v !== 2) return false;
+      return true;
     };
 
-    let recommended: { year: number, season: Season } | null = null;
+    let recommended: { year: number, season: Season, variant: number } | null = null;
     const seasonsToCheck = ['w', 's', 'm'] as Season[];
+    const variantsToCheck = [2, 1, 3];
+    const selectedPaper = Number(searchPaper);
     
     for (let y = maxYear; y >= minYear; y--) {
       for (const s of seasonsToCheck) {
-        if (isAvailable(y, s)) {
-          const hasPaper = subjectLogs.some(l => l.year === y && l.season === s);
-          if (!hasPaper) {
-            recommended = { year: y, season: s };
-            break;
+        for (const v of variantsToCheck) {
+          if (isAvailable(y, s, v)) {
+            const hasPaper = subjectLogs.some(l => l.year === y && l.season === s && l.variant === v && l.paper === selectedPaper);
+            if (!hasPaper) {
+              recommended = { year: y, season: s, variant: v };
+              break;
+            }
           }
         }
+        if (recommended) break;
       }
       if (recommended) break;
     }
 
-    return { displayYears, seasons, seasonLabels, recommended };
-  }, [subjectLogs]);
+    return { displayYears, seasons, variants, seasonLabels, recommended, isAvailable };
+  }, [searchPaper, subjectLogs]);
 
   if (!subject) return null;
 
@@ -245,37 +255,39 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
     }
   };
 
-  const handleRecommendClick = (year: number, season: Season) => {
-    // March series only has variant 2 for all subjects
-    let targetVariant = searchVariant;
-    if (season === 'm' && targetVariant !== 'none') {
-      targetVariant = '2';
-      setSearchVariant('2');
-    }
+  const openQuestionPaper = (year: number, season: Season, variant: number) => {
+    const targetVariant = String(variant);
+    const variantText = ` variant ${targetVariant}`;
 
-    // Update the search fields so it's ready
     setSearchYear(year.toString());
     setSearchSeason(season);
-    
-    // Pre-fill the new log form for when they return and click '+'
+    setSearchVariant(targetVariant);
+
     setNewLog(prev => ({ ...prev, year, season, variant: targetVariant }));
-    
-    // Open the question paper
+
     if (!subject?.code) {
-      const variantText = targetVariant === 'none' ? '' : ` variant ${targetVariant}`;
       const query = `IGCSE ${subject.name} past paper ${year} ${getSeasonName(season)} paper ${searchPaper}${variantText}`;
       window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank');
       return;
     }
     
     const year2Digit = year.toString().slice(-2);
-    const paperStr = targetVariant === 'none' ? searchPaper : `${searchPaper}${targetVariant}`;
+    const paperStr = `${searchPaper}${targetVariant}`;
     const url = `https://pastpapers.papacambridge.com/directories/CAIE/CAIE-pastpapers/upload/${subject.code}_${season}${year2Digit}_qp_${paperStr}.pdf`;
     
     window.open(url, '_blank');
   };
 
-  const handleEditLog = (log: any) => {
+  const handleGridCellClick = (year: number, season: Season, variant: number, log?: PaperLog) => {
+    if (log) {
+      handleEditLog(log);
+      return;
+    }
+
+    openQuestionPaper(year, season, variant);
+  };
+
+  const handleEditLog = (log: PaperLog) => {
     setNewLog({
       date: format(parseISO(log.date), 'yyyy-MM-dd'),
       year: log.year,
@@ -696,9 +708,18 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
                       </button>
                     </div>
                     {log.notes && (
-                      <p className="text-sm text-slate-500 dark:text-slate-400 italic max-w-xs truncate transition-colors">
-                        "{log.notes}"
-                      </p>
+                      <div className="max-w-xs">
+                        <p className="text-sm text-slate-500 dark:text-slate-400 italic truncate transition-colors">
+                          "{log.notes}"
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setFullNotesLog(log)}
+                          className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline mt-1"
+                        >
+                          View full note
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -713,60 +734,104 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[600px]">
+            <table className="w-full text-left border-collapse min-w-[980px]">
               <thead>
                 <tr>
-                  <th className="p-3 border-b border-slate-200 dark:border-slate-800 font-semibold text-sm text-slate-900 dark:text-slate-100">Year</th>
+                  <th className="p-3 border-b border-slate-200 dark:border-slate-800 font-semibold text-sm text-slate-900 dark:text-slate-100 align-bottom" rowSpan={2}>Year</th>
                   {gridData.seasons.map(s => (
-                    <th key={s} className="p-3 border-b border-slate-200 dark:border-slate-800 font-semibold text-sm text-slate-900 dark:text-slate-100">{gridData.seasonLabels[s]}</th>
+                    <th key={s} colSpan={gridData.variants.length} className="p-3 border-b border-slate-200 dark:border-slate-800 font-semibold text-sm text-slate-900 dark:text-slate-100 text-center">{gridData.seasonLabels[s]}</th>
+                  ))}
+                </tr>
+                <tr>
+                  {gridData.seasons.map(s => (
+                    <React.Fragment key={`${s}-variants`}>
+                      {gridData.variants.map(v => (
+                        <th key={`${s}-v${v}`} className="p-2 border-b border-slate-200 dark:border-slate-800 font-medium text-xs text-slate-500 dark:text-slate-400 text-center">
+                          Variant {v}
+                        </th>
+                      ))}
+                    </React.Fragment>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {gridData.displayYears.map(year => (
-                  <tr key={year} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
+                  <tr key={year} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
                     <td className="p-3 border-b border-slate-100 dark:border-slate-800/50 font-medium text-sm text-slate-700 dark:text-slate-300 align-top w-24">
                       {year}
                     </td>
                     {gridData.seasons.map(season => {
-                      const cellLogs = subjectLogs.filter(l => l.year === year && l.season === season);
-                      const isRecommended = gridData.recommended?.year === year && gridData.recommended?.season === season;
-                      
-                      return (
-                        <td key={`${year}-${season}`} className={`p-3 border-b border-slate-100 dark:border-slate-800/50 align-top ${isRecommended ? 'bg-indigo-50/30 dark:bg-indigo-500/5' : ''}`}>
-                          <div className="flex flex-col items-start gap-2">
-                            {isRecommended && cellLogs.length === 0 && (
-                              <button 
-                                onClick={() => handleRecommendClick(year, season)}
-                                className="text-xs font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-500/20 px-2 py-1 rounded-md flex items-center hover:bg-indigo-200 dark:hover:bg-indigo-500/30 transition-colors"
+                      return gridData.variants.map(variant => {
+                        const isAvailable = gridData.isAvailable(year, season, variant);
+                        const cellLogs = subjectLogs.filter(
+                          l => l.year === year && l.season === season && l.variant === variant && l.paper === Number(searchPaper)
+                        );
+                        const existingLog = cellLogs[0];
+                        const extraLogs = cellLogs.length - 1;
+                        const percentage = existingLog ? Math.round((existingLog.score / existingLog.maxScore) * 100) : 0;
+                        const isRecommended = gridData.recommended?.year === year && gridData.recommended?.season === season && gridData.recommended?.variant === variant;
+
+                        return (
+                          <td
+                            key={`${year}-${season}-${variant}`}
+                            className={`p-1.5 border-b border-slate-100 dark:border-slate-800/50 align-top ${isRecommended ? 'bg-indigo-50/30 dark:bg-indigo-500/5' : ''}`}
+                          >
+                            {!isAvailable ? (
+                              <div className="h-20 rounded-lg border border-dashed border-slate-200 dark:border-slate-700/70 bg-slate-50/60 dark:bg-slate-900/40 flex items-center justify-center text-xs text-slate-400 dark:text-slate-600">
+                                Not available
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleGridCellClick(year, season, variant, existingLog)}
+                                className={`w-full h-20 rounded-lg border text-left p-2 transition-colors ${
+                                  existingLog
+                                    ? 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700/80'
+                                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-500/10'
+                                }`}
+                                title={
+                                  existingLog
+                                    ? `Open entry: ${existingLog.score}/${existingLog.maxScore} (${percentage}%)`
+                                    : `Open Paper ${searchPaper}${variant}`
+                                }
                               >
-                                <Flame className="w-3 h-3 mr-1" /> Recommended Next
+                                {existingLog ? (
+                                  <div className="flex h-full flex-col justify-between">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                                        {existingLog.score}/{existingLog.maxScore}
+                                      </span>
+                                      <span className={cn(
+                                        'text-xs font-semibold',
+                                        subject.targetScore && percentage >= subject.targetScore
+                                          ? 'text-emerald-600 dark:text-emerald-400'
+                                          : 'text-slate-600 dark:text-slate-300'
+                                      )}>
+                                        {percentage}%
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                                      <span>{format(parseISO(existingLog.date), 'dd MMM')}</span>
+                                      {extraLogs > 0 && <span>+{extraLogs} more</span>}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="flex h-full flex-col justify-center">
+                                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                                      Open paper {searchPaper}{variant}
+                                    </span>
+                                    {isRecommended && (
+                                      <span className="text-[11px] font-medium text-indigo-600 dark:text-indigo-400 mt-1 inline-flex items-center">
+                                        <Flame className="w-3 h-3 mr-1" /> Recommended next
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
                               </button>
                             )}
-                            <div className="flex flex-wrap gap-2">
-                              {cellLogs.length > 0 ? (
-                                cellLogs.map(log => {
-                                  const percentage = Math.round((log.score / log.maxScore) * 100);
-                                  return (
-                                    <button
-                                      key={log.id}
-                                      onClick={() => handleEditLog(log)}
-                                      className="text-xs px-2 py-1.5 rounded-lg border flex items-center gap-1.5 hover:opacity-80 transition-opacity bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
-                                      title={`Score: ${log.score}/${log.maxScore} (${percentage}%)`}
-                                    >
-                                      <span className="font-semibold">P{log.paper}V{log.variant}</span>
-                                      <span className="opacity-50">|</span>
-                                      <span className={subject.targetScore && percentage >= subject.targetScore ? 'text-emerald-600 dark:text-emerald-400 font-medium' : ''}>{percentage}%</span>
-                                    </button>
-                                  );
-                                })
-                              ) : (
-                                !isRecommended && <span className="text-xs text-slate-400 dark:text-slate-600 italic opacity-0 group-hover:opacity-100 transition-opacity">No papers</span>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-                      );
+                          </td>
+                        );
+                      });
                     })}
                   </tr>
                 ))}
@@ -775,6 +840,38 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
           </div>
         )}
       </div>
+
+      {/* Full Notes Modal */}
+      <AnimatePresence>
+        {fullNotesLog && (
+          <div className="fixed inset-0 z-[65] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-lg border border-slate-200 dark:border-slate-800"
+            >
+              <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <h4 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                  Notes • {fullNotesLog.year} {getSeasonName(fullNotesLog.season)} P{fullNotesLog.paper}{fullNotesLog.variant}
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => setFullNotesLog(null)}
+                  className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="p-4">
+                <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+                  {fullNotesLog.notes}
+                </p>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Log Paper Modal */}
       <AnimatePresence>
