@@ -818,11 +818,11 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
                                 ) : (
                                   <div className="flex h-full flex-col justify-center">
                                     <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                                      Open paper {searchPaper} {variant}
+                                      Open Paper {searchPaper} {variant}
                                     </span>
                                     {isRecommended && (
                                       <span className="text-[11px] font-medium text-indigo-600 dark:text-indigo-400 mt-1 inline-flex items-center">
-                                        <Flame className="w-3 h-3 mr-1" /> Recommended next
+                                        <Flame className="w-3 h-3 mr-1" /> Recommended Next
                                       </span>
                                     )}
                                   </div>
