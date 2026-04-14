@@ -792,7 +792,7 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
                                 title={
                                   existingLog
                                     ? `Open entry: ${existingLog.score}/${existingLog.maxScore} (${percentage}%)`
-                                    : `Open Paper ${searchPaper}${variant}`
+                                    : `Open Paper ${searchPaper} Variant ${variant}`
                                 }
                               >
                                 {existingLog ? (
@@ -818,7 +818,7 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
                                 ) : (
                                   <div className="flex h-full flex-col justify-center">
                                     <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                                      Open Paper {searchPaper} {variant}
+                                      Open Paper {searchPaper} Variant {variant}
                                     </span>
                                     {isRecommended && (
                                       <span className="text-[11px] font-medium text-indigo-600 dark:text-indigo-400 mt-1 inline-flex items-center">
