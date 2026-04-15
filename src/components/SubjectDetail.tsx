@@ -634,16 +634,18 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
           <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700/50">
             <button
               onClick={() => setViewMode('grid')}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-200 ${viewMode === 'grid' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400 font-medium' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900 ${viewMode === 'grid' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400 font-medium' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
               title="Grid View"
+              aria-pressed={viewMode === 'grid'}
             >
               <LayoutGrid className="w-4 h-4" />
               <span className="text-sm">Grid</span>
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-200 ${viewMode === 'list' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400 font-medium' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900 ${viewMode === 'list' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400 font-medium' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
               title="List View"
+              aria-pressed={viewMode === 'list'}
             >
               <List className="w-4 h-4" />
               <span className="text-sm">List</span>
@@ -711,21 +713,27 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
               </div>
             )}
           </div>
+        ) : subjectLogs.length === 0 && !isAddingLog ? (
+          <div className="flex flex-col items-center justify-center py-14 text-slate-500 dark:text-slate-400 transition-colors">
+            <FileQuestion className="w-12 h-12 mb-4 opacity-20" />
+            <p className="text-sm text-center">No papers logged yet. Start practicing!</p>
+          </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[600px]">
+          <div className="-mx-2 px-2 sm:mx-0 sm:px-0 overflow-x-auto">
+            <table className="w-full text-left min-w-[520px] sm:min-w-[600px] border-separate border-spacing-0">
+              <caption className="sr-only">Paper history grid by year and exam season</caption>
               <thead>
                 <tr>
-                  <th className="p-3 border-b border-slate-200 dark:border-slate-800 font-semibold text-sm text-slate-900 dark:text-slate-100">Year</th>
+                  <th className="p-2.5 sm:p-3 border-b border-slate-200 dark:border-slate-800 font-semibold text-xs sm:text-sm text-slate-600 dark:text-slate-300 uppercase tracking-wide">Year</th>
                   {gridData.seasons.map(s => (
-                    <th key={s} className="p-3 border-b border-slate-200 dark:border-slate-800 font-semibold text-sm text-slate-900 dark:text-slate-100">{gridData.seasonLabels[s]}</th>
+                    <th key={s} className="p-2.5 sm:p-3 border-b border-slate-200 dark:border-slate-800 font-semibold text-xs sm:text-sm text-slate-900 dark:text-slate-100">{gridData.seasonLabels[s]}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {gridData.displayYears.map(year => (
-                  <tr key={year} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
-                    <td className="p-3 border-b border-slate-100 dark:border-slate-800/50 font-medium text-sm text-slate-700 dark:text-slate-300 align-top w-24">
+                  <tr key={year} className="group">
+                    <td className="p-2.5 sm:p-3 border-b border-slate-100 dark:border-slate-800/50 font-medium text-sm text-slate-700 dark:text-slate-300 align-top w-16 sm:w-24">
                       {year}
                     </td>
                     {gridData.seasons.map(season => {
@@ -733,17 +741,17 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
                       const isRecommended = gridData.recommended?.year === year && gridData.recommended?.season === season;
                       
                       return (
-                        <td key={`${year}-${season}`} className={`p-3 border-b border-slate-100 dark:border-slate-800/50 align-top ${isRecommended ? 'bg-indigo-50/30 dark:bg-indigo-500/5' : ''}`}>
-                          <div className="flex flex-col items-start gap-2">
+                        <td key={`${year}-${season}`} className="p-2.5 sm:p-3 border-b border-slate-100 dark:border-slate-800/50 align-top">
+                          <div className={`min-h-20 sm:min-h-24 h-full flex flex-col items-start gap-2 p-2.5 rounded-xl border transition-colors ${isRecommended ? 'bg-indigo-50/60 dark:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/30' : 'bg-slate-50/60 dark:bg-slate-900/40 border-slate-200/80 dark:border-slate-800/80'}`}>
                             {isRecommended && cellLogs.length === 0 && (
                               <button 
                                 onClick={() => handleRecommendClick(year, season)}
-                                className="text-xs font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-500/20 px-2 py-1 rounded-md flex items-center hover:bg-indigo-200 dark:hover:bg-indigo-500/30 transition-colors"
+                                className="text-xs font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-500/20 px-2 py-1 rounded-md inline-flex items-center hover:bg-indigo-200 dark:hover:bg-indigo-500/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/70"
                               >
                                 <Flame className="w-3 h-3 mr-1" /> Recommended Next
                               </button>
                             )}
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex flex-wrap gap-1.5 sm:gap-2">
                               {cellLogs.length > 0 ? (
                                 cellLogs.map(log => {
                                   const percentage = Math.round((log.score / log.maxScore) * 100);
@@ -751,7 +759,7 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
                                     <button
                                       key={log.id}
                                       onClick={() => handleEditLog(log)}
-                                      className="text-xs px-2 py-1.5 rounded-lg border flex items-center gap-1.5 hover:opacity-80 transition-opacity bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
+                                      className="text-xs px-2 py-1.5 rounded-lg border inline-flex items-center gap-1.5 hover:opacity-80 transition-opacity bg-white/80 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/70"
                                       title={`Score: ${log.score}/${log.maxScore} (${percentage}%)`}
                                     >
                                       <span className="font-semibold">P{log.paper}V{log.variant}</span>
@@ -761,7 +769,7 @@ export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps)
                                   );
                                 })
                               ) : (
-                                !isRecommended && <span className="text-xs text-slate-400 dark:text-slate-600 italic opacity-0 group-hover:opacity-100 transition-opacity">No papers</span>
+                                !isRecommended && <span className="text-xs text-slate-400 dark:text-slate-500 italic">No papers</span>
                               )}
                             </div>
                           </div>
