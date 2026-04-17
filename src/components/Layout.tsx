@@ -6,6 +6,8 @@ import { auth } from '../firebase';
 import { User } from 'firebase/auth';
 import { LogForm } from './LogForm';
 import { useStore } from '../store';
+import { SharedAccount } from '../types';
+import { toast } from 'sonner';
 
 export function cn(...inputs: (string | undefined | null | false)[]) {
   return twMerge(clsx(inputs));
@@ -17,10 +19,28 @@ interface LayoutProps {
   navigateTo: (view: 'dashboard' | 'subjects') => void;
   user: User;
   store: ReturnType<typeof useStore>;
+  sharedAccounts: SharedAccount[];
+  activeUserId: string;
+  onSelectActiveUser: (userId: string) => void;
+  isSharedView: boolean;
+  onShareByEmail: (email: string) => Promise<void>;
 }
 
-export function Layout({ children, currentView, navigateTo, user, store }: LayoutProps) {
+export function Layout({
+  children,
+  currentView,
+  navigateTo,
+  user,
+  store,
+  sharedAccounts,
+  activeUserId,
+  onSelectActiveUser,
+  isSharedView,
+  onShareByEmail
+}: LayoutProps) {
   const [isLogFormOpen, setIsLogFormOpen] = useState(false);
+  const [shareEmail, setShareEmail] = useState('');
+  const [isSharing, setIsSharing] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('theme') === 'dark' || 
@@ -39,7 +59,32 @@ export function Layout({ children, currentView, navigateTo, user, store }: Layou
     }
   }, [isDarkMode]);
 
+  useEffect(() => {
+    if (isSharedView) {
+      setIsLogFormOpen(false);
+    }
+  }, [isSharedView]);
+
   const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
+
+  const handleShare = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!shareEmail.trim()) {
+      toast.error('Please enter an email address.');
+      return;
+    }
+
+    try {
+      setIsSharing(true);
+      await onShareByEmail(shareEmail.trim());
+      toast.success('Access shared successfully.');
+      setShareEmail('');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to share access.');
+    } finally {
+      setIsSharing(false);
+    }
+  };
 
   return (
     <div className="flex h-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 font-sans transition-colors duration-200">
@@ -48,12 +93,53 @@ export function Layout({ children, currentView, navigateTo, user, store }: Layou
         <div className="p-6">
           <h1 className="text-2xl font-bold tracking-tight text-indigo-600 dark:text-indigo-400 font-display">IGCSE Tracker</h1>
           <button
-            onClick={() => setIsLogFormOpen(true)}
-            className="mt-6 w-full flex items-center justify-center px-4 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
+            onClick={() => {
+              if (!isSharedView) {
+                setIsLogFormOpen(true);
+              }
+            }}
+            disabled={isSharedView}
+            aria-label={isSharedView ? 'Read-only view - logging disabled' : 'Quick log paper'}
+            title={isSharedView ? 'Read-only view - logging disabled' : 'Quick log paper'}
+            className="mt-6 w-full flex items-center justify-center px-4 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <Plus className="w-4 h-4 mr-2" />
-            Quick Log
+            {isSharedView ? 'Read-only View' : 'Quick Log'}
           </button>
+          <div className="mt-4 space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wider">Viewing</label>
+              <select
+                value={activeUserId}
+                onChange={(e) => onSelectActiveUser(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 transition-colors"
+              >
+                <option value={user.uid}>My Account</option>
+                {sharedAccounts.map((account) => (
+                  <option key={account.ownerUid} value={account.ownerUid}>
+                    {account.ownerDisplayName || account.ownerEmail || 'Unknown User'}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <form onSubmit={handleShare} className="space-y-2">
+              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Share access</label>
+              <input
+                type="email"
+                value={shareEmail}
+                onChange={(e) => setShareEmail(e.target.value)}
+                placeholder="parent@email.com"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 transition-colors"
+              />
+              <button
+                type="submit"
+                disabled={isSharing}
+                className="w-full px-3 py-2 bg-slate-900 text-white rounded-xl text-sm font-medium hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+              >
+                {isSharing ? 'Sharing...' : 'Share by Email'}
+              </button>
+            </form>
+          </div>
         </div>
         <nav className="flex-1 px-4 space-y-2">
           <button
@@ -115,7 +201,17 @@ export function Layout({ children, currentView, navigateTo, user, store }: Layou
         <header className="md:hidden bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between transition-colors duration-200">
           <h1 className="text-xl font-bold text-indigo-600 dark:text-indigo-400 font-display">IGCSE Tracker</h1>
           <div className="flex items-center space-x-2">
-            <button onClick={() => setIsLogFormOpen(true)} className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-xl transition-colors">
+            <button
+              onClick={() => {
+                if (!isSharedView) {
+                  setIsLogFormOpen(true);
+                }
+              }}
+              disabled={isSharedView}
+              aria-label={isSharedView ? 'Read-only view - logging disabled' : 'Quick log paper'}
+              title={isSharedView ? 'Read-only view - logging disabled' : 'Quick log paper'}
+              className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-xl transition-colors disabled:opacity-40"
+            >
               <Plus className="w-5 h-5" />
             </button>
             <button onClick={toggleDarkMode} className="p-2 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400">
@@ -157,7 +253,7 @@ export function Layout({ children, currentView, navigateTo, user, store }: Layou
           </button>
         </nav>
       </main>
-      {isLogFormOpen && <LogForm store={store} onClose={() => setIsLogFormOpen(false)} />}
+      {isLogFormOpen && !isSharedView && <LogForm store={store} onClose={() => setIsLogFormOpen(false)} />}
     </div>
   );
 }

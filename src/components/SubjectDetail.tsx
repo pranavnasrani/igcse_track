@@ -20,10 +20,11 @@ interface SubjectDetailProps {
   subjectId: string;
   onBack: () => void;
   userId: string;
+  actingUserId: string;
 }
 
-export function SubjectDetail({ subjectId, onBack, userId }: SubjectDetailProps) {
-  const { subjects, logs, addLog, deleteLog, updateLog, updateSubject, deleteSubject } = useStore(userId);
+export function SubjectDetail({ subjectId, onBack, userId, actingUserId }: SubjectDetailProps) {
+  const { subjects, logs, addLog, deleteLog, updateLog, updateSubject, deleteSubject } = useStore(userId, actingUserId);
   const subject = subjects.find(s => s.id === subjectId);
   const subjectLogs = logs.filter(l => l.subjectId === subjectId).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 

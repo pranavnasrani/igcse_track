@@ -22,6 +22,30 @@ export interface PaperLog {
   timeTaken?: number; // in minutes
 }
 
+export interface UserProfile {
+  uid: string;
+  email: string;
+  emailLowercase: string;
+  displayName?: string;
+  updatedAt: string;
+}
+
+export interface SharedAccessGrant {
+  viewerUid: string;
+  viewerEmail: string;
+  viewerEmailLowercase: string;
+  ownerUid: string;
+  ownerEmail: string;
+  ownerDisplayName?: string;
+  sharedAt: string;
+}
+
+export interface SharedAccount {
+  ownerUid: string;
+  ownerEmail: string;
+  ownerDisplayName?: string;
+}
+
 export const DEFAULT_SUBJECTS: Subject[] = [
   { id: '1', name: 'Mathematics', code: '0580', color: '#3b82f6', targetScore: 90 },
   { id: '2', name: 'Physics', code: '0625', color: '#ef4444', targetScore: 85 },
