@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, BookOpen, LogOut, Sun, Moon, Plus } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { LayoutDashboard, BookOpen, LogOut, Sun, Moon, Plus, Share2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { auth } from '../firebase';
@@ -39,8 +39,10 @@ export function Layout({
   onShareByEmail
 }: LayoutProps) {
   const [isLogFormOpen, setIsLogFormOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [shareEmail, setShareEmail] = useState('');
   const [isSharing, setIsSharing] = useState(false);
+  const shareEmailRef = useRef<HTMLInputElement>(null);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('theme') === 'dark' || 
@@ -79,12 +81,19 @@ export function Layout({
       await onShareByEmail(shareEmail.trim());
       toast.success('Access shared successfully.');
       setShareEmail('');
+      setIsShareModalOpen(false);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Unable to share access.');
     } finally {
       setIsSharing(false);
     }
   };
+
+  useEffect(() => {
+    if (isShareModalOpen) {
+      setTimeout(() => shareEmailRef.current?.focus(), 50);
+    }
+  }, [isShareModalOpen]);
 
   return (
     <div className="flex h-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 font-sans transition-colors duration-200">
@@ -106,39 +115,20 @@ export function Layout({
             <Plus className="w-4 h-4 mr-2" />
             {isSharedView ? 'Read-only View' : 'Quick Log'}
           </button>
-          <div className="mt-4 space-y-3">
-            <div>
-              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wider">Viewing</label>
-              <select
-                value={activeUserId}
-                onChange={(e) => onSelectActiveUser(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 transition-colors"
-              >
-                <option value={user.uid}>My Account</option>
-                {sharedAccounts.map((account) => (
-                  <option key={account.ownerUid} value={account.ownerUid}>
-                    {account.ownerDisplayName || account.ownerEmail || 'Unknown User'}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <form onSubmit={handleShare} className="space-y-2">
-              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Share access</label>
-              <input
-                type="email"
-                value={shareEmail}
-                onChange={(e) => setShareEmail(e.target.value)}
-                placeholder="parent@email.com"
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 transition-colors"
-              />
-              <button
-                type="submit"
-                disabled={isSharing}
-                className="w-full px-3 py-2 bg-slate-900 text-white rounded-xl text-sm font-medium hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-              >
-                {isSharing ? 'Sharing...' : 'Share by Email'}
-              </button>
-            </form>
+          <div className="mt-4">
+            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wider">Viewing</label>
+            <select
+              value={activeUserId}
+              onChange={(e) => onSelectActiveUser(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 transition-colors"
+            >
+              <option value={user.uid}>My Account</option>
+              {sharedAccounts.map((account) => (
+                <option key={account.ownerUid} value={account.ownerUid}>
+                  {account.ownerDisplayName || account.ownerEmail || 'Unknown User'}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
         <nav className="flex-1 px-4 space-y-2">
@@ -183,6 +173,13 @@ export function Layout({
               title="Toggle Dark Mode"
             >
               {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </button>
+            <button
+              onClick={() => setIsShareModalOpen(true)}
+              className="flex-1 flex items-center justify-center px-4 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+              title="Share Access"
+            >
+              <Share2 className="w-5 h-5" />
             </button>
             <button
               onClick={() => auth.signOut()}
@@ -254,6 +251,51 @@ export function Layout({
         </nav>
       </main>
       {isLogFormOpen && !isSharedView && <LogForm store={store} onClose={() => setIsLogFormOpen(false)} />}
+      {isShareModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          onClick={() => setIsShareModalOpen(false)}
+        >
+          <div
+            className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center space-x-3 mb-4">
+              <Share2 className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+              <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Share access</h2>
+            </div>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+              Enter the email of someone you'd like to grant view access to your account.
+            </p>
+            <form onSubmit={handleShare} className="space-y-3">
+              <input
+                ref={shareEmailRef}
+                type="email"
+                value={shareEmail}
+                onChange={(e) => setShareEmail(e.target.value)}
+                placeholder="parent@email.com"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 transition-colors"
+              />
+              <div className="flex items-center space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setIsShareModalOpen(false)}
+                  className="flex-1 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSharing}
+                  className="flex-1 px-3 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isSharing ? 'Sharing…' : 'Share'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
