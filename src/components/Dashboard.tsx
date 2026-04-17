@@ -17,10 +17,11 @@ import { PaperLog } from '../types';
 
 interface DashboardProps {
   userId: string;
+  actingUserId: string;
 }
 
-export function Dashboard({ userId }: DashboardProps) {
-  const store = useStore(userId);
+export function Dashboard({ userId, actingUserId }: DashboardProps) {
+  const store = useStore(userId, actingUserId);
   const { subjects, logs } = store;
 
   const [searchQuery, setSearchQuery] = useState('');

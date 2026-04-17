@@ -8,10 +8,11 @@ import { IGCSE_SUBJECTS } from '../constants';
 interface SubjectListProps {
   onSelectSubject: (id: string) => void;
   userId: string;
+  actingUserId: string;
 }
 
-export function SubjectList({ onSelectSubject, userId }: SubjectListProps) {
-  const { subjects, addSubject } = useStore(userId);
+export function SubjectList({ onSelectSubject, userId, actingUserId }: SubjectListProps) {
+  const { subjects, addSubject } = useStore(userId, actingUserId);
   const [isAdding, setIsAdding] = useState(false);
   const [newSubjectName, setNewSubjectName] = useState('');
   const [newSubjectCode, setNewSubjectCode] = useState('');

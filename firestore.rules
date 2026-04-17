@@ -45,6 +45,15 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    function isSharedViewer(userId) {
+      return isAuthenticated() &&
+             exists(/databases/$(database)/documents/users/$(userId)/sharedWith/$(request.auth.uid));
+    }
+
+    function canReadUserData(userId) {
+      return isOwner(userId) || isSharedViewer(userId);
+    }
+
     function hasOnlyAllowedFields(allowedFields) {
       return request.resource.data.keys().hasOnly(allowedFields);
     }
@@ -72,6 +81,31 @@ service cloud.firestore {
     function isValidDateString(dateStr) {
       return dateStr is string &&
         dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    }
+
+    function isValidUserProfile(profileId) {
+      let allowedFields = ['uid', 'email', 'emailLowercase', 'displayName', 'updatedAt'];
+      return hasOnlyAllowedFields(allowedFields) &&
+             isValidString('uid', 1, 100) &&
+             request.resource.data.uid == profileId &&
+             isValidString('email', 3, 200) &&
+             isValidString('emailLowercase', 3, 200) &&
+             isValidOptionalString('displayName', 0, 100) &&
+             isValidDateString(request.resource.data.updatedAt);
+    }
+
+    function isValidShareGrant(ownerId, viewerId) {
+      let allowedFields = ['viewerUid', 'viewerEmail', 'viewerEmailLowercase', 'ownerUid', 'ownerEmail', 'ownerDisplayName', 'sharedAt'];
+      return hasOnlyAllowedFields(allowedFields) &&
+             isValidString('viewerUid', 1, 100) &&
+             isValidString('viewerEmail', 3, 200) &&
+             isValidString('viewerEmailLowercase', 3, 200) &&
+             isValidString('ownerUid', 1, 100) &&
+             isValidString('ownerEmail', 3, 200) &&
+             isValidOptionalString('ownerDisplayName', 0, 100) &&
+             isValidDateString(request.resource.data.sharedAt) &&
+             request.resource.data.viewerUid == viewerId &&
+             request.resource.data.ownerUid == ownerId;
     }
 
     // ===============================================================
@@ -109,19 +143,31 @@ service cloud.firestore {
     // Rules
     // ===============================================================
 
+    match /userProfiles/{profileId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isOwner(profileId) && isValidUserProfile(profileId);
+      allow delete: if isOwner(profileId);
+    }
+
     match /users/{userId} {
       // Allow read/write to user's own document (if needed later)
       allow read, write: if isOwner(userId);
 
+      match /sharedWith/{viewerUid} {
+        allow read: if isOwner(userId) || (isAuthenticated() && request.auth.uid == viewerUid);
+        allow create, update: if isOwner(userId) && isValidShareGrant(userId, viewerUid);
+        allow delete: if isOwner(userId);
+      }
+
       match /subjects/{subjectId} {
-        allow read: if isOwner(userId);
+        allow read: if canReadUserData(userId);
         allow create: if isOwner(userId) && isValidSubject() && request.resource.data.id == subjectId;
         allow update: if isOwner(userId) && isValidSubject() && request.resource.data.id == subjectId;
         allow delete: if isOwner(userId);
       }
 
       match /logs/{logId} {
-        allow read: if isOwner(userId);
+        allow read: if canReadUserData(userId);
         allow create: if isOwner(userId) && isValidLog() && request.resource.data.id == logId;
         allow update: if isOwner(userId) && isValidLog() && request.resource.data.id == logId;
         allow delete: if isOwner(userId);

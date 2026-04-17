@@ -5,10 +5,11 @@ import { Subject, PaperLog, DEFAULT_SUBJECTS } from './types';
 import { handleFirestoreError, OperationType } from './errorHandling';
 import { toast } from 'sonner';
 
-export function useStore(userId: string | undefined) {
+export function useStore(userId: string | undefined, actingUserId?: string) {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [logs, setLogs] = useState<PaperLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const canEdit = Boolean(userId && actingUserId && userId === actingUserId);
 
   useEffect(() => {
     if (!userId) {
@@ -24,17 +25,17 @@ export function useStore(userId: string | undefined) {
     const unsubscribeSubjects = onSnapshot(subjectsRef, (snapshot) => {
       const loadedSubjects = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subject));
       
-      if (loadedSubjects.length === 0 && snapshot.metadata.hasPendingWrites === false) {
-         DEFAULT_SUBJECTS.forEach(async (subj) => {
-            try {
-              await setDoc(doc(db, `users/${userId}/subjects`, subj.id), subj);
-            } catch (e) {
-              handleFirestoreError(e, OperationType.CREATE, `users/${userId}/subjects`);
-            }
-         });
-      } else {
-         setSubjects(loadedSubjects);
-      }
+       if (loadedSubjects.length === 0 && snapshot.metadata.hasPendingWrites === false && canEdit) {
+          DEFAULT_SUBJECTS.forEach(async (subj) => {
+             try {
+               await setDoc(doc(db, `users/${userId}/subjects`, subj.id), subj);
+             } catch (e) {
+               handleFirestoreError(e, OperationType.CREATE, `users/${userId}/subjects`);
+             }
+          });
+       } else {
+          setSubjects(loadedSubjects);
+       }
     }, (error) => handleFirestoreError(error, OperationType.LIST, `users/${userId}/subjects`));
 
     const logsRef = query(collection(db, `users/${userId}/logs`), orderBy('date', 'desc'));
@@ -47,10 +48,14 @@ export function useStore(userId: string | undefined) {
       unsubscribeSubjects();
       unsubscribeLogs();
     };
-  }, [userId]);
+  }, [userId, canEdit]);
 
   const addLog = async (log: Omit<PaperLog, 'id'>) => {
     if (!userId) return;
+    if (!canEdit) {
+      toast.error('Shared accounts are read-only.');
+      return;
+    }
     const id = crypto.randomUUID();
     try {
       const data = { ...log, id };
@@ -66,6 +71,10 @@ export function useStore(userId: string | undefined) {
 
   const updateLog = async (id: string, data: Partial<PaperLog>) => {
     if (!userId) return;
+    if (!canEdit) {
+      toast.error('Shared accounts are read-only.');
+      return;
+    }
     try {
       const cleanData = { ...data };
       Object.keys(cleanData).forEach(key => cleanData[key as keyof typeof cleanData] === undefined && delete cleanData[key as keyof typeof cleanData]);
@@ -79,6 +88,10 @@ export function useStore(userId: string | undefined) {
 
   const deleteLog = async (id: string) => {
     if (!userId) return;
+    if (!canEdit) {
+      toast.error('Shared accounts are read-only.');
+      return;
+    }
     try {
       await deleteDoc(doc(db, `users/${userId}/logs`, id));
       toast.success('Log deleted');
@@ -90,6 +103,10 @@ export function useStore(userId: string | undefined) {
 
   const addSubject = async (subject: Omit<Subject, 'id'>) => {
     if (!userId) return;
+    if (!canEdit) {
+      toast.error('Shared accounts are read-only.');
+      return;
+    }
     const id = crypto.randomUUID();
     try {
       const data = { ...subject, id };
@@ -105,6 +122,10 @@ export function useStore(userId: string | undefined) {
 
   const updateSubject = async (id: string, data: Partial<Subject>) => {
     if (!userId) return;
+    if (!canEdit) {
+      toast.error('Shared accounts are read-only.');
+      return;
+    }
     try {
       const cleanData = { ...data };
       Object.keys(cleanData).forEach(key => cleanData[key as keyof typeof cleanData] === undefined && delete cleanData[key as keyof typeof cleanData]);
@@ -118,6 +139,10 @@ export function useStore(userId: string | undefined) {
 
   const deleteSubject = async (id: string) => {
     if (!userId) return;
+    if (!canEdit) {
+      toast.error('Shared accounts are read-only.');
+      return;
+    }
     try {
       await deleteDoc(doc(db, `users/${userId}/subjects`, id));
       toast.success('Subject deleted');
@@ -127,5 +152,5 @@ export function useStore(userId: string | undefined) {
     }
   };
 
-  return { subjects, logs, loading, addLog, updateLog, deleteLog, addSubject, updateSubject, deleteSubject };
+  return { subjects, logs, loading, canEdit, addLog, updateLog, deleteLog, addSubject, updateSubject, deleteSubject };
 }

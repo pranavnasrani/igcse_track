@@ -9,10 +9,12 @@ import { SubjectDetail } from './components/SubjectDetail';
 import { Login } from './components/Login';
 import { motion, AnimatePresence } from 'motion/react';
 import { Toaster } from 'sonner';
+import { grantViewerAccess, upsertUserProfile, useSharedAccounts } from './sharing';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [activeUserId, setActiveUserId] = useState<string | null>(null);
   
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
@@ -22,7 +24,36 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  const store = useStore(user?.uid);
+  useEffect(() => {
+    if (!user) {
+      setActiveUserId(null);
+      return;
+    }
+
+    setActiveUserId((prev) => prev || user.uid);
+    upsertUserProfile(user).catch((error) => {
+      console.error('Failed to save user profile', error);
+    });
+  }, [user]);
+
+  const sharedAccounts = useSharedAccounts(user?.uid);
+
+  useEffect(() => {
+    if (!user) return;
+    if (!activeUserId) {
+      setActiveUserId(user.uid);
+      return;
+    }
+
+    const validShared = sharedAccounts.some((account) => account.ownerUid === activeUserId);
+    if (activeUserId !== user.uid && !validShared) {
+      setActiveUserId(user.uid);
+    }
+  }, [user, activeUserId, sharedAccounts]);
+
+  const viewingUserId = activeUserId || user?.uid;
+  const isSharedView = Boolean(user && viewingUserId && viewingUserId !== user.uid);
+  const store = useStore(viewingUserId, user?.uid);
   
   const [currentView, setCurrentView] = useState<'dashboard' | 'subjects' | 'subject'>('dashboard');
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
@@ -42,12 +73,30 @@ export default function App() {
     return <Login />;
   }
 
+  if (!viewingUserId) {
+    return <div className="h-full flex items-center justify-center bg-slate-50 dark:bg-slate-950"><div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div></div>;
+  }
+
   if (store.loading) {
     return <div className="h-full flex items-center justify-center bg-slate-50 dark:bg-slate-950"><div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div></div>;
   }
 
   return (
-    <Layout currentView={currentView} navigateTo={navigateTo} user={user} store={store}>
+    <Layout
+      currentView={currentView}
+      navigateTo={navigateTo}
+      user={user}
+      store={store}
+      sharedAccounts={sharedAccounts}
+      activeUserId={viewingUserId}
+      onSelectActiveUser={(id) => {
+        setActiveUserId(id);
+        setCurrentView('dashboard');
+        setSelectedSubjectId(null);
+      }}
+      isSharedView={isSharedView}
+      onShareByEmail={(email) => grantViewerAccess(user, email)}
+    >
       <Toaster position="bottom-right" richColors />
       <AnimatePresence mode="wait">
         <motion.div
@@ -58,11 +107,12 @@ export default function App() {
           transition={{ duration: 0.2 }}
           className="h-full"
         >
-          {currentView === 'dashboard' && <Dashboard userId={user.uid} />}
-          {currentView === 'subjects' && <SubjectList userId={user.uid} onSelectSubject={(id) => navigateTo('subject', id)} />}
+          {currentView === 'dashboard' && <Dashboard userId={viewingUserId} actingUserId={user.uid} />}
+          {currentView === 'subjects' && <SubjectList userId={viewingUserId} actingUserId={user.uid} onSelectSubject={(id) => navigateTo('subject', id)} />}
           {currentView === 'subject' && selectedSubjectId && (
             <SubjectDetail 
-              userId={user.uid} 
+              userId={viewingUserId} 
+              actingUserId={user.uid}
               subjectId={selectedSubjectId} 
               onBack={() => navigateTo('subjects')} 
             />
