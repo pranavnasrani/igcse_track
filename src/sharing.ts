@@ -2,14 +2,14 @@ import { useEffect, useState } from 'react';
 import { User } from 'firebase/auth';
 import {
   collection,
-  collectionGroup,
   doc,
   getDocs,
   limit,
   onSnapshot,
   query,
   setDoc,
-  where
+  where,
+  writeBatch
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { SharedAccount, SharedAccessGrant, UserProfile } from './types';
@@ -68,7 +68,12 @@ export async function grantViewerAccess(owner: User, viewerEmailInput: string) {
     sharedAt: new Date().toISOString()
   };
 
-  await setDoc(doc(db, `users/${owner.uid}/sharedWith`, profileData.uid), grant, { merge: true });
+  // Write both docs atomically: subcollection is used by security rules (canReadUserData),
+  // top-level sharedAccess is queried by viewers without needing a collection-group index.
+  const batch = writeBatch(db);
+  batch.set(doc(db, `users/${owner.uid}/sharedWith`, profileData.uid), grant, { merge: true });
+  batch.set(doc(db, 'sharedAccess', `${owner.uid}_${profileData.uid}`), grant, { merge: true });
+  await batch.commit();
 }
 
 export function useSharedAccounts(viewerUid: string | undefined) {
@@ -80,7 +85,7 @@ export function useSharedAccounts(viewerUid: string | undefined) {
       return;
     }
 
-    const sharedQuery = query(collectionGroup(db, 'sharedWith'), where('viewerUid', '==', viewerUid));
+    const sharedQuery = query(collection(db, 'sharedAccess'), where('viewerUid', '==', viewerUid));
     const unsubscribe = onSnapshot(sharedQuery, (snapshot) => {
       const dedupe = new Map<string, SharedAccount>();
 

@@ -144,6 +144,20 @@ service cloud.firestore {
     // Rules
     // ===============================================================
 
+    // Top-level collection mirroring users/{userId}/sharedWith/{viewerUid}.
+    // Queried by viewers to list accounts shared with them without needing a
+    // collection-group index.
+    match /sharedAccess/{grantId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.viewerUid ||
+        request.auth.uid == resource.data.ownerUid
+      );
+      allow create, update: if isAuthenticated() &&
+        request.auth.uid == request.resource.data.ownerUid &&
+        isValidShareGrant(request.resource.data.ownerUid, request.resource.data.viewerUid);
+      allow delete: if isAuthenticated() && request.auth.uid == resource.data.ownerUid;
+    }
+
     match /userProfiles/{profileId} {
       allow read: if isAuthenticated();
       allow create, update: if isOwner(profileId) && isValidUserProfile(profileId);
