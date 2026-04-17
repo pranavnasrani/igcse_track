@@ -21,7 +21,7 @@ export async function upsertUserProfile(user: User) {
     uid: user.uid,
     email: user.email,
     emailLowercase: user.email.toLowerCase(),
-    displayName: user.displayName || '',
+    displayName: user.displayName || undefined,
     updatedAt: new Date().toISOString()
   };
 
@@ -36,11 +36,6 @@ export async function grantViewerAccess(owner: User, viewerEmailInput: string) {
   const viewerEmailLowercase = viewerEmailInput.trim().toLowerCase();
   if (!viewerEmailLowercase) {
     throw new Error('Please enter an email address.');
-  }
-
-  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailPattern.test(viewerEmailLowercase)) {
-    throw new Error('Please enter a valid email address.');
   }
 
   if (viewerEmailLowercase === owner.email.toLowerCase()) {
@@ -69,7 +64,7 @@ export async function grantViewerAccess(owner: User, viewerEmailInput: string) {
     viewerEmailLowercase,
     ownerUid: owner.uid,
     ownerEmail: owner.email,
-    ownerDisplayName: owner.displayName || '',
+    ownerDisplayName: owner.displayName || undefined,
     sharedAt: new Date().toISOString()
   };
 
@@ -96,7 +91,7 @@ export function useSharedAccounts(viewerUid: string | undefined) {
         dedupe.set(data.ownerUid, {
           ownerUid: data.ownerUid,
           ownerEmail: data.ownerEmail || '',
-          ownerDisplayName: data.ownerDisplayName || ''
+          ownerDisplayName: data.ownerDisplayName || undefined
         });
       });
 

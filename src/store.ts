@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { collection, onSnapshot, doc, setDoc, deleteDoc, query, orderBy } from 'firebase/firestore';
 import { db } from './firebase';
 import { Subject, PaperLog, DEFAULT_SUBJECTS } from './types';
@@ -9,7 +9,7 @@ export function useStore(userId: string | undefined, actingUserId?: string) {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [logs, setLogs] = useState<PaperLog[]>([]);
   const [loading, setLoading] = useState(true);
-  const canEdit = Boolean(userId && actingUserId && userId === actingUserId);
+  const canEdit = useMemo(() => Boolean(userId && actingUserId && userId === actingUserId), [userId, actingUserId]);
 
   useEffect(() => {
     if (!userId) {

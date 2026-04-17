@@ -105,7 +105,8 @@ service cloud.firestore {
              isValidOptionalString('ownerDisplayName', 0, 100) &&
              isValidDateString(request.resource.data.sharedAt) &&
              request.resource.data.viewerUid == viewerId &&
-             request.resource.data.ownerUid == ownerId;
+             request.resource.data.ownerUid == ownerId &&
+             exists(/databases/$(database)/documents/userProfiles/$(viewerId));
     }
 
     // ===============================================================

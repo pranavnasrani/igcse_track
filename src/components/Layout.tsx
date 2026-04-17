@@ -59,6 +59,12 @@ export function Layout({
     }
   }, [isDarkMode]);
 
+  useEffect(() => {
+    if (isSharedView) {
+      setIsLogFormOpen(false);
+    }
+  }, [isSharedView]);
+
   const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
 
   const handleShare = async (e: React.FormEvent) => {
@@ -87,9 +93,15 @@ export function Layout({
         <div className="p-6">
           <h1 className="text-2xl font-bold tracking-tight text-indigo-600 dark:text-indigo-400 font-display">IGCSE Tracker</h1>
           <button
-            onClick={() => !isSharedView && setIsLogFormOpen(true)}
+            onClick={() => {
+              if (!isSharedView) {
+                setIsLogFormOpen(true);
+              }
+            }}
             disabled={isSharedView}
-            className="mt-6 w-full flex items-center justify-center px-4 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
+            aria-label={isSharedView ? 'Read-only view - logging disabled' : 'Quick log paper'}
+            title={isSharedView ? 'Read-only view - logging disabled' : 'Quick log paper'}
+            className="mt-6 w-full flex items-center justify-center px-4 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <Plus className="w-4 h-4 mr-2" />
             {isSharedView ? 'Read-only View' : 'Quick Log'}
@@ -105,7 +117,7 @@ export function Layout({
                 <option value={user.uid}>My Account</option>
                 {sharedAccounts.map((account) => (
                   <option key={account.ownerUid} value={account.ownerUid}>
-                    {account.ownerDisplayName || account.ownerEmail || account.ownerUid}
+                    {account.ownerDisplayName || account.ownerEmail || 'Unknown User'}
                   </option>
                 ))}
               </select>
@@ -189,7 +201,17 @@ export function Layout({
         <header className="md:hidden bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between transition-colors duration-200">
           <h1 className="text-xl font-bold text-indigo-600 dark:text-indigo-400 font-display">IGCSE Tracker</h1>
           <div className="flex items-center space-x-2">
-            <button onClick={() => !isSharedView && setIsLogFormOpen(true)} disabled={isSharedView} className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-xl transition-colors disabled:opacity-40">
+            <button
+              onClick={() => {
+                if (!isSharedView) {
+                  setIsLogFormOpen(true);
+                }
+              }}
+              disabled={isSharedView}
+              aria-label={isSharedView ? 'Read-only view - logging disabled' : 'Quick log paper'}
+              title={isSharedView ? 'Read-only view - logging disabled' : 'Quick log paper'}
+              className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-xl transition-colors disabled:opacity-40"
+            >
               <Plus className="w-5 h-5" />
             </button>
             <button onClick={toggleDarkMode} className="p-2 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400">
