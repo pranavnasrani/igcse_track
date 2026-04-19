@@ -23,10 +23,28 @@ interface SubjectDetailProps {
   actingUserId: string;
 }
 
+const SEASON_LABELS: Record<Season, string> = {
+  m: 'March',
+  s: 'June',
+  w: 'November'
+};
+
+type TrendTooltipPayload = {
+  payload?: {
+    fullDate?: string;
+    rawScore?: number;
+    maxScore?: number;
+    label?: string;
+  };
+};
+
 export function SubjectDetail({ subjectId, onBack, userId, actingUserId }: SubjectDetailProps) {
   const { subjects, logs, addLog, deleteLog, updateLog, updateSubject, deleteSubject } = useStore(userId, actingUserId);
   const subject = subjects.find(s => s.id === subjectId);
-  const subjectLogs = logs.filter(l => l.subjectId === subjectId).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const subjectLogs = useMemo(
+    () => logs.filter(l => l.subjectId === subjectId).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+    [logs, subjectId]
+  );
 
   const [isAddingLog, setIsAddingLog] = useState(false);
   const [editingLogId, setEditingLogId] = useState<string | null>(null);
@@ -153,12 +171,36 @@ export function SubjectDetail({ subjectId, onBack, userId, actingUserId }: Subje
   };
 
   const chartData = useMemo(() => {
-    return [...subjectLogs].reverse().map(log => ({
-      date: format(parseISO(log.date), 'MMM dd'),
-      score: Math.round((log.score / log.maxScore) * 100),
-      label: `${log.year} ${log.season}${log.paper}${log.variant}`
-    }));
+    return subjectLogs
+      .map(log => {
+        const timestamp = new Date(log.date).getTime();
+        const percentage = log.maxScore > 0 ? Math.round((log.score / log.maxScore) * 100) : 0;
+        const seasonLabel = SEASON_LABELS[log.season] ?? log.season.toUpperCase();
+
+        return {
+          timestamp,
+          fullDate: format(parseISO(log.date), 'dd MMM yyyy'),
+          score: Math.min(100, Math.max(0, percentage)),
+          rawScore: log.score,
+          maxScore: log.maxScore,
+          label: `${log.year} ${seasonLabel} P${log.paper}V${log.variant}`
+        };
+      })
+      .filter(point => Number.isFinite(point.timestamp))
+      .sort((a, b) => a.timestamp - b.timestamp);
   }, [subjectLogs]);
+
+  const formatTrendTick = (timestamp: number) => {
+    const date = new Date(timestamp);
+    return Number.isNaN(date.getTime()) ? '' : format(date, 'MMM dd');
+  };
+  const formatTrendTooltipLabel = (
+    _: unknown,
+    payload?: ReadonlyArray<TrendTooltipPayload>
+  ) => {
+    const firstPayload = payload?.[0];
+    return firstPayload?.payload?.fullDate || '';
+  };
 
   const averageScore = useMemo(() => {
     if (subjectLogs.length === 0) return 0;
@@ -176,7 +218,7 @@ export function SubjectDetail({ subjectId, onBack, userId, actingUserId }: Subje
     const displayYears = Array.from({ length: maxYear - minYear + 1 }, (_, i) => maxYear - i);
     
     const seasons: Season[] = ['m', 's', 'w'];
-    const seasonLabels = { m: 'March', s: 'June', w: 'November' };
+    const seasonLabels = SEASON_LABELS;
     
     const isAvailable = (y: number, s: Season) => {
       return y <= maxAvailableYear;
@@ -600,13 +642,31 @@ export function SubjectDetail({ subjectId, onBack, userId, actingUserId }: Subje
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis dataKey="date" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                {/* Numeric timestamp axis keeps points in true chronological order with natural spacing. */}
+                <XAxis
+                  dataKey="timestamp"
+                  type="number"
+                  domain={['dataMin', 'dataMax']}
+                  stroke="#94a3b8"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={formatTrendTick}
+                />
                 <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} domain={[0, 100]} />
                 <Tooltip
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                   labelStyle={{ fontWeight: 'bold', color: '#0f172a' }}
+                  labelFormatter={formatTrendTooltipLabel}
+                  formatter={(value: number, _name, item) => {
+                    if (!item?.payload) return [`${value}%`, 'Score'];
+                    return [
+                      `${value}% (${item.payload.rawScore ?? 0}/${item.payload.maxScore ?? 0})`,
+                      item.payload.label ?? 'Score'
+                    ];
+                  }}
                 />
-                {subject.targetScore && (
+                {typeof subject.targetScore === 'number' && (
                   <ReferenceLine y={subject.targetScore} stroke="#10b981" strokeDasharray="3 3" label={{ position: 'insideTopLeft', value: 'Target', fill: '#10b981', fontSize: 12 }} />
                 )}
                 <Line
