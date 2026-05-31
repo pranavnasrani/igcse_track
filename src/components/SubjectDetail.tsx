@@ -5,8 +5,9 @@ import { format, parseISO } from 'date-fns';
 import { Season } from '../types';
 import { IGCSE_SUBJECTS } from '../constants';
 import {
-  LineChart,
+  ComposedChart,
   Line,
+  Scatter,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -31,10 +32,12 @@ const SEASON_LABELS: Record<Season, string> = {
 
 type TrendTooltipPayload = {
   payload?: {
+    timestamp?: number;
     fullDate?: string;
     rawScore?: number;
     maxScore?: number;
     label?: string;
+    isTrendLine?: boolean;
   };
 };
 
@@ -195,12 +198,51 @@ export function SubjectDetail({ subjectId, onBack, userId, actingUserId }: Subje
     return Number.isNaN(date.getTime()) ? '' : format(date, 'MMM dd');
   };
   const formatTrendTooltipLabel = (
-    _: unknown,
+    label: unknown,
     payload?: ReadonlyArray<TrendTooltipPayload>
   ) => {
-    const firstPayload = payload?.[0];
-    return firstPayload?.payload?.fullDate || '';
+    if (typeof label === 'number') {
+      const date = new Date(label);
+      if (!Number.isNaN(date.getTime())) {
+        return format(date, 'dd MMM yyyy');
+      }
+    }
+
+    const matchingPayload = payload?.find((entry) => entry.payload?.fullDate);
+    return matchingPayload?.payload?.fullDate || '';
   };
+
+  const trendLineData = useMemo(() => {
+    if (chartData.length < 2) return [];
+
+    const n = chartData.length;
+    const sumX = chartData.reduce((acc, point) => acc + point.timestamp, 0);
+    const sumY = chartData.reduce((acc, point) => acc + point.score, 0);
+    const sumXY = chartData.reduce((acc, point) => acc + point.timestamp * point.score, 0);
+    const sumX2 = chartData.reduce((acc, point) => acc + point.timestamp * point.timestamp, 0);
+    const denominator = n * sumX2 - sumX * sumX;
+
+    const xMin = chartData[0].timestamp;
+    const xMax = chartData[chartData.length - 1].timestamp;
+
+    const clampScore = (value: number) => Math.min(100, Math.max(0, value));
+
+    if (denominator === 0 || xMin === xMax) {
+      const average = clampScore(sumY / n);
+      return [
+        { timestamp: xMin, trendScore: average, isTrendLine: true },
+        { timestamp: xMax, trendScore: average, isTrendLine: true }
+      ];
+    }
+
+    const slope = (n * sumXY - sumX * sumY) / denominator;
+    const intercept = (sumY - slope * sumX) / n;
+
+    return [
+      { timestamp: xMin, trendScore: clampScore(slope * xMin + intercept), isTrendLine: true },
+      { timestamp: xMax, trendScore: clampScore(slope * xMax + intercept), isTrendLine: true }
+    ];
+  }, [chartData]);
 
   const averageScore = useMemo(() => {
     if (subjectLogs.length === 0) return 0;
@@ -640,7 +682,7 @@ export function SubjectDetail({ subjectId, onBack, userId, actingUserId }: Subje
         <div className="h-72">
           {chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+              <ComposedChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                 {/* Numeric timestamp axis keeps points in true chronological order with natural spacing. */}
                 <XAxis
@@ -660,6 +702,11 @@ export function SubjectDetail({ subjectId, onBack, userId, actingUserId }: Subje
                   labelFormatter={formatTrendTooltipLabel}
                   formatter={(value: number, _name, item) => {
                     if (!item?.payload) return [`${value}%`, 'Score'];
+
+                    if (item.payload.isTrendLine) {
+                      return [`${Math.round(value)}%`, 'Best fit'];
+                    }
+
                     return [
                       `${value}% (${item.payload.rawScore ?? 0}/${item.payload.maxScore ?? 0})`,
                       item.payload.label ?? 'Score'
@@ -669,16 +716,36 @@ export function SubjectDetail({ subjectId, onBack, userId, actingUserId }: Subje
                 {typeof subject.targetScore === 'number' && (
                   <ReferenceLine y={subject.targetScore} stroke="#10b981" strokeDasharray="3 3" label={{ position: 'insideTopLeft', value: 'Target', fill: '#10b981', fontSize: 12 }} />
                 )}
-                <Line
-                  type="monotone"
+                {trendLineData.length > 1 && (
+                  <Line
+                    type="linear"
+                    data={trendLineData}
+                    dataKey="trendScore"
+                    stroke={subject.color}
+                    strokeOpacity={0.5}
+                    strokeWidth={2}
+                    dot={false}
+                    activeDot={false}
+                    name="Best fit"
+                    legendType="none"
+                  />
+                )}
+                <Scatter
+                  data={chartData}
                   dataKey="score"
-                  stroke={subject.color}
-                  strokeWidth={3}
-                  dot={{ r: 4, strokeWidth: 2, fill: '#fff' }}
-                  activeDot={{ r: 6, strokeWidth: 0 }}
+                  fill={subject.color}
                   name="Score (%)"
                 />
-              </LineChart>
+                <Line
+                  type="linear"
+                  data={chartData}
+                  dataKey="score"
+                  stroke="transparent"
+                  dot={{ r: 4, strokeWidth: 2, fill: '#fff', stroke: subject.color }}
+                  activeDot={{ r: 6, strokeWidth: 0 }}
+                  legendType="none"
+                />
+              </ComposedChart>
             </ResponsiveContainer>
           ) : (
             <div className="h-full flex items-center justify-center text-slate-400">
