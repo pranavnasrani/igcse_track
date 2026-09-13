@@ -252,7 +252,7 @@ export function SubjectDetail({ subjectId, onBack, userId, actingUserId }: Subje
 
   const gridData = useMemo(() => {
     const currentYear = new Date().getFullYear();
-    const maxAvailableYear = currentYear - 1; // Exclude current year as papers aren't out yet
+    const maxAvailableYear = currentYear;
     const logYears = subjectLogs.map(l => l.year);
     const earliestLogYear = logYears.length > 0 ? Math.min(...logYears) : maxAvailableYear;
     const maxYear = Math.max(maxAvailableYear, ...logYears);
