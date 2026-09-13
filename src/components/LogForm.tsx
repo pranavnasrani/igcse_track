@@ -15,7 +15,7 @@ export function LogForm({ store, defaultSubjectId, existingLog, onClose }: LogFo
   const { subjects, addLog, updateLog, deleteLog } = store;
   
   const [subjectId, setSubjectId] = useState(existingLog?.subjectId || defaultSubjectId || subjects[0]?.id || '');
-  const [year, setYear] = useState(existingLog?.year || new Date().getFullYear() - 1);
+  const [year, setYear] = useState(existingLog?.year || new Date().getFullYear());
   const [season, setSeason] = useState<'m' | 's' | 'w'>(existingLog?.season || 's');
   const [paper, setPaper] = useState(existingLog?.paper || 4);
   const [variant, setVariant] = useState(existingLog?.variant || 1);
